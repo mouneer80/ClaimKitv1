@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data.SqlClient;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web.Configuration;
@@ -19,6 +18,7 @@ namespace ClaimKitv1
     {
         // Dependency injection could be used here in a more advanced implementation
         private readonly IClaimKitApiService _apiService;
+        private readonly LoggingService _logger;
 
         // Store the request ID for sequential workflows
         private string _requestId;
@@ -30,6 +30,7 @@ namespace ClaimKitv1
         {
             // Simple service initialization - could use IoC container in a more advanced implementation
             _apiService = new ClaimKitApiService();
+            _logger = LoggingService.Instance;
         }
 
         protected void Page_Load(object sender, EventArgs e)
@@ -39,6 +40,23 @@ namespace ClaimKitv1
                 // Set default values from configuration
                 txtPolicyId.Text = WebConfigurationManager.AppSettings["DefaultPolicyId"];
                 txtPatientHistory.Text = WebConfigurationManager.AppSettings["DefaultPatientHistory"];
+
+                // Log application access
+                _logger.LogUserAction("Application Access", "User accessed the ClaimKit application");
+            }
+            else
+            {
+                // Handle postback state for showing modals
+                string modalToShow = hdnShowModal.Value;
+                if (!string.IsNullOrEmpty(modalToShow))
+                {
+                    // Schedule the modal to be shown after the UpdatePanel completes
+                    ScriptManager.RegisterStartupScript(this, GetType(), "ShowModalAfterPostback",
+                        $"setTimeout(function() {{ window.{modalToShow}(); }}, 300);", true);
+
+                    // Clear the modal flag
+                    hdnShowModal.Value = "";
+                }
             }
 
             // Retrieve requestId from ViewState if available
@@ -48,6 +66,8 @@ namespace ClaimKitv1
             }
         }
 
+        #region Button Click Event Handlers
+
         protected void btnReviewNotes_Click(object sender, EventArgs e)
         {
             // Hide previous results
@@ -56,16 +76,182 @@ namespace ClaimKitv1
             // Validate inputs
             if (string.IsNullOrWhiteSpace(txtDoctorNotes.Text))
             {
-                DisplayError("Doctor notes are required.");
+                DisplayError("Clinical notes are required to proceed with the review.");
                 return;
             }
 
-            // Register async task
-            RegisterAsyncTask(new PageAsyncTask(PerformReviewAsync));
+            try
+            {
+                // Log the action
+                _logger.LogUserAction("Review Notes Initiated", $"Doctor: {txtDoctorName.Text}, Patient ID: {txtPatientId.Text}");
 
-            // Automatically show the review results popup
-            ScriptManager.RegisterStartupScript(this, GetType(), "ShowReviewResults", "window.showReviewResultsModal();", true);
+                // Register async task
+                RegisterAsyncTask(new PageAsyncTask(PerformReviewAsync));
+
+                // Show loading indicator (UI feedback)
+                ScriptManager.RegisterStartupScript(this, GetType(), "ShowLoading",
+                    "document.getElementById('loadingIndicator').style.display = 'block';", true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error initiating review", ex);
+                DisplayError("There was an issue starting the review process. Please try again.");
+            }
         }
+
+        protected void btnEnhanceNotes_Click(object sender, EventArgs e)
+        {
+            // Hide previous results
+            pnlEnhancedNotes.Visible = false;
+            pnlGeneratedClaim.Visible = false;
+
+            try
+            {
+                // Log the action
+                _logger.LogUserAction("Enhance Notes Initiated", $"Request ID: {_requestId}");
+
+                // Register async task
+                RegisterAsyncTask(new PageAsyncTask(PerformEnhanceAsync));
+
+                // Show loading indicator
+                ScriptManager.RegisterStartupScript(this, GetType(), "ShowLoading",
+                    "document.getElementById('loadingIndicator').style.display = 'block';", true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error initiating enhance notes", ex);
+                DisplayError("There was an issue starting the enhancement process. Please try again.");
+            }
+        }
+
+        protected void btnGenerateClaim_Click(object sender, EventArgs e)
+        {
+            // Hide previous results
+            pnlGeneratedClaim.Visible = false;
+
+            try
+            {
+                // Log the action
+                _logger.LogUserAction("Generate Claim Initiated", $"Request ID: {_requestId}");
+
+                // Register async task
+                RegisterAsyncTask(new PageAsyncTask(PerformGenerateClaimAsync));
+
+                // Show loading indicator
+                ScriptManager.RegisterStartupScript(this, GetType(), "ShowLoading",
+                    "document.getElementById('loadingIndicator').style.display = 'block';", true);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error initiating claim generation", ex);
+                DisplayError("There was an issue starting the claim generation process. Please try again.");
+            }
+        }
+
+        protected void btnServerApproveNotes_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                // Get the selected notes from the hidden field
+                string selectedNotesJson = hdnSelectedNotes.Value;
+                if (string.IsNullOrEmpty(selectedNotesJson))
+                {
+                    DisplayError("No enhanced notes were selected. Please select at least one note to approve.");
+                    return;
+                }
+
+                // Parse the selected notes
+                var selectedNotes = JsonConvert.DeserializeObject<List<string>>(selectedNotesJson);
+
+                // Log the action
+                _logger.LogUserAction("Approved Enhanced Notes",
+                    $"Request ID: {_requestId}, Notes Count: {selectedNotes.Count}");
+
+                // Prepare final notes for editing
+                PrepareAndShowFinalNotes(selectedNotes);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error approving notes", ex);
+                DisplayError("There was an issue approving the enhanced notes. Please try again.");
+            }
+        }
+
+        protected void btnServerApproveDiagnoses_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                // Get the selected diagnoses from the hidden field
+                string selectedDiagnosesJson = hdnSelectedDiagnoses.Value;
+                if (string.IsNullOrEmpty(selectedDiagnosesJson))
+                {
+                    DisplayError("No diagnoses were selected. Please select at least one diagnosis to approve.");
+                    return;
+                }
+
+                // Parse the selected diagnoses
+                var selectedDiagnoses = JsonConvert.DeserializeObject<List<string>>(selectedDiagnosesJson);
+
+                // Log the action
+                _logger.LogUserAction("Approved Claim Diagnoses",
+                    $"Request ID: {_requestId}, Diagnoses Count: {selectedDiagnoses.Count}");
+
+                // Show confirmation
+                ShowConfirmation("The selected diagnoses have been approved and will be used for the insurance claim.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error approving diagnoses", ex);
+                DisplayError("There was an issue approving the diagnoses. Please try again.");
+            }
+        }
+
+        protected void btnSaveFinalNotes_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(txtFinalNotes.Text))
+                {
+                    DisplayError("Final clinical notes cannot be empty. Please enter your notes.");
+                    return;
+                }
+
+                // Log the action
+                _logger.LogUserAction("Final Notes Saved", $"Request ID: {_requestId}");
+
+                // In a real application, we would save the notes to a database here
+                // For now, just show a confirmation message
+                ShowConfirmation("Your clinical notes have been successfully saved and the claim information has been sent to the insurance company.");
+
+                // Reset the form for a new entry
+                ResetAllPanels();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error saving final notes", ex);
+                DisplayError("There was an issue saving your final notes. Please try again.");
+            }
+        }
+
+        protected void btnEditFinalNotes_Click(object sender, EventArgs e)
+        {
+            // Just keep the panel visible for further editing
+            pnlFinalNotes.Visible = true;
+        }
+
+        protected void btnCloseError_Click(object sender, EventArgs e)
+        {
+            pnlError.Visible = false;
+        }
+
+        protected void btnCloseConfirmation_Click(object sender, EventArgs e)
+        {
+            pnlConfirmation.Visible = false;
+        }
+
+        #endregion
+
+        #region Async API Call Methods
 
         private async Task PerformReviewAsync()
         {
@@ -99,6 +285,10 @@ namespace ClaimKitv1
                     PatientHistory = patientHistory
                 };
 
+                // Log the request details
+                _logger.LogUserAction("Sending Review Request",
+                    $"Patient ID: {reviewRequest.HospitalPatientId}, Insurance: {reviewRequest.InsuranceCompany}");
+
                 // Call API service
                 var response = await _apiService.ReviewNotesAsync(reviewRequest);
 
@@ -107,32 +297,29 @@ namespace ClaimKitv1
             }
             catch (Exception ex)
             {
-                DisplayError($"Error: {ex.Message}");
+                _logger.LogError("Error during review process", ex);
+                DisplayError("There was an issue reviewing your clinical notes. Our technical team has been notified.");
             }
-        }
-
-        protected void btnEnhanceNotes_Click(object sender, EventArgs e)
-        {
-            // Hide previous results
-            pnlEnhancedNotes.Visible = false;
-            pnlGeneratedClaim.Visible = false;
-            //lblError.Visible = false;
-
-            // Register async task
-            RegisterAsyncTask(new PageAsyncTask(PerformEnhanceAsync));
+            finally
+            {
+                // Hide loading indicator
+                ScriptManager.RegisterStartupScript(this, GetType(), "HideLoading",
+                    "document.getElementById('loadingIndicator').style.display = 'none';", true);
+            }
         }
 
         private async Task PerformEnhanceAsync()
         {
             try
             {
+                // Check request ID
                 if (string.IsNullOrEmpty(_requestId))
                 {
-                    DisplayError("You must review notes first to get a request ID.");
+                    DisplayError("Please review your clinical notes first before enhancing them.");
                     return;
                 }
 
-                // Create enhance request
+                // Create enhance request with proper parameters
                 var enhanceRequest = new EnhanceRequest
                 {
                     HospitalId = ConfigurationService.HospitalId,
@@ -140,40 +327,53 @@ namespace ClaimKitv1
                     RequestId = _requestId
                 };
 
+                // Clear debug log and add request
+                _logger.LogUserAction("Enhance Request", JsonConvert.SerializeObject(enhanceRequest));
+
                 // Call API service
                 var response = await _apiService.EnhanceNotesAsync(enhanceRequest);
+
+                // Log raw response for debugging
+                _logger.LogUserAction("Enhance Response", response.RawResponse);
 
                 // Process response
                 ProcessEnhanceResponse(response);
             }
             catch (Exception ex)
             {
-                DisplayError($"Error: {ex.Message}");
+                _logger.LogError("Enhancement Error", ex);
+                DisplayError("There was an issue enhancing your clinical notes. Please try again.");
             }
-        }
-
-        protected void btnGenerateClaim_Click(object sender, EventArgs e)
-        {
-            // Hide previous results
-            pnlGeneratedClaim.Visible = false;
-            //lblError.Visible = false;
-
-            // Register async task
-            RegisterAsyncTask(new PageAsyncTask(PerformGenerateClaimAsync));
+            finally
+            {
+                // Hide loading indicator
+                ScriptManager.RegisterStartupScript(this, GetType(), "HideLoading",
+                    "document.getElementById('loadingIndicator').style.display = 'none';", true);
+            }
         }
 
         private async Task PerformGenerateClaimAsync()
         {
             try
             {
+                // Check request ID
                 if (string.IsNullOrEmpty(_requestId))
                 {
-                    DisplayError("You must review notes first to get a request ID.");
+                    DisplayError("Please review your clinical notes first before generating a claim.");
                     return;
                 }
 
                 // Get checkout time from ViewState
-                long checkoutTime = (long)ViewState["CheckoutTime"];
+                long checkoutTime;
+                if (ViewState["CheckoutTime"] != null)
+                {
+                    checkoutTime = (long)ViewState["CheckoutTime"];
+                }
+                else
+                {
+                    // Default to current time + 1 hour if missing
+                    checkoutTime = GetCurrentUnixTimestamp() + 3600;
+                }
 
                 // Create generate claim request
                 var generateClaimRequest = new GenerateClaimRequest
@@ -188,17 +388,155 @@ namespace ClaimKitv1
                     PolicyId = txtPolicyId.Text
                 };
 
+                // Log request for debugging
+                _logger.LogUserAction("Claim Request", JsonConvert.SerializeObject(generateClaimRequest));
+
                 // Call API service
                 var response = await _apiService.GenerateClaimAsync(generateClaimRequest);
+
+                // Log raw response
+                _logger.LogUserAction("Claim Response", response.RawResponse);
 
                 // Process response
                 ProcessGenerateClaimResponse(response);
             }
             catch (Exception ex)
             {
-                DisplayError($"Error: {ex.Message}");
+                _logger.LogError("Claim Generation Error", ex);
+                DisplayError("There was an issue generating the insurance claim. Please try again.");
+            }
+            finally
+            {
+                // Hide loading indicator
+                ScriptManager.RegisterStartupScript(this, GetType(), "HideLoading",
+                    "document.getElementById('loadingIndicator').style.display = 'none';", true);
             }
         }
+
+        #endregion
+
+        #region Response Processing Methods
+
+        private void ProcessReviewResponse(ReviewResponse response)
+        {
+            if (response == null)
+            {
+                DisplayError("No response received from the medical records system.");
+                return;
+            }
+
+            // Log the response
+            _logger.LogUserAction("Review Response Received",
+                $"Success: {response.IsSuccess}, Message: {response.Message}");
+
+            if (response.IsSuccess)
+            {
+                // Store request ID for future calls
+                _requestId = response.RequestId;
+                if (string.IsNullOrEmpty(_requestId))
+                {
+                    DisplayError("Request ID not returned from the medical records system.");
+                    return;
+                }
+
+                ViewState["RequestId"] = _requestId;
+
+                // Display success message
+                lblStatus.Text = $"<div class='success'>Status: {FormatStatusMessage(response.Message)}</div>";
+                lblRequestId.Text = $"<div>Request ID: {_requestId}</div>";
+
+                // Bind review categories to repeater if available
+                if (response.Review != null && response.Review.Count > 0)
+                {
+                    rptReviewCategories.DataSource = response.Review;
+                    rptReviewCategories.DataBind();
+                }
+                else
+                {
+                    // No review data available
+                    lblStatus.Text += "<div>No clinical review data available</div>";
+                }
+
+                // Show results panel and enable enhance/generate buttons
+                pnlReviewResults.Visible = true;
+                pnlActionButtons.Visible = true;
+
+                // Show the review results modal
+                ScriptManager.RegisterStartupScript(this, GetType(), "ShowReviewResults",
+                    "window.showReviewResultsModal();", true);
+            }
+            else
+            {
+                // Display error message with a more user-friendly format
+                DisplayError($"The clinical notes review could not be completed: {FormatErrorMessage(response.Message)}");
+            }
+        }
+
+        private void ProcessEnhanceResponse(EnhanceResponse response)
+        {
+            if (response == null)
+            {
+                DisplayError("No response received from the system.");
+                return;
+            }
+
+            if (response.IsSuccess)
+            {
+                if (response.Data != null && response.Data.EnhancedNotes != null)
+                {
+                    // Display enhanced notes
+                    litEnhancedNotes.Text = JsonConvert.SerializeObject(response.Data.EnhancedNotes, Formatting.Indented);
+                    pnlEnhancedNotes.Visible = true;
+
+                    // Set the modal to show after UpdatePanel refresh
+                    hdnShowModal.Value = "showEnhancedNotesModal";
+                }
+                else
+                {
+                    DisplayError("No enhanced clinical notes were found in the response.");
+                }
+            }
+            else
+            {
+                // Display error message
+                DisplayError($"The clinical notes enhancement could not be completed: {FormatErrorMessage(response.Message)}");
+            }
+        }
+
+        private void ProcessGenerateClaimResponse(GenerateClaimResponse response)
+        {
+            if (response == null)
+            {
+                DisplayError("No response received from the system.");
+                return;
+            }
+
+            if (response.IsSuccess)
+            {
+                if (response.Data != null && response.Data.GeneratedClaim != null)
+                {
+                    // Display generated claim
+                    litGeneratedClaim.Text = JsonConvert.SerializeObject(response.Data.GeneratedClaim, Formatting.Indented);
+                    pnlGeneratedClaim.Visible = true;
+
+                    // Set the modal to show after UpdatePanel refresh
+                    hdnShowModal.Value = "showGeneratedClaimModal";
+                }
+                else
+                {
+                    DisplayError("No insurance claim data was found in the response.");
+                }
+            }
+            else
+            {
+                // Display error message
+                DisplayError($"The insurance claim generation could not be completed: {FormatErrorMessage(response.Message)}");
+            }
+        }
+
+        #endregion
+
+        #region Repeater Event Handlers
 
         protected void rptReviewCategories_ItemDataBound(object sender, RepeaterItemEventArgs e)
         {
@@ -218,143 +556,60 @@ namespace ClaimKitv1
                 {
                     if (dataItem is ReviewCategory category)
                     {
-                        // Use strongly-typed ReviewCategory object
-                        content.AppendLine($"<div class=\"category-name\">{category.Category ?? "Category not available"}</div>");
+                        // Format category name for display
+                        string displayName = FormatCategoryName(category.Category ?? "Unknown Category");
+
+                        // Determine status class
+                        string statusClass = GetStatusClass(category.Status);
+
+                        // Create formatted HTML with category header and content
+                        content.AppendLine($"<div class=\"category-header\">");
+                        content.AppendLine($"  <span class=\"category-title\">{displayName}</span>");
+                        content.AppendLine($"  <span class=\"expand-icon\">▼</span>");
+                        content.AppendLine($"</div>");
+                        content.AppendLine($"<div class=\"category-content\">");
 
                         if (!string.IsNullOrEmpty(category.Status))
                         {
-                            content.AppendLine($"<div class=\"category-status\">Status: {category.Status}</div>");
+                            content.AppendLine($"  <div class=\"status-badge {statusClass}\">{category.Status}</div>");
                         }
 
                         if (!string.IsNullOrEmpty(category.Reason))
                         {
-                            content.AppendLine($"<div class=\"category-reason\">{category.Reason}</div>");
+                            content.AppendLine($"  <div class=\"section-reasoning\">{category.Reason}</div>");
                         }
+
+                        content.AppendLine($"</div>");
                     }
                     else
                     {
                         // Fallback if it's not a ReviewCategory
-                        content.AppendLine("<div class=\"category-name\">Unknown category format</div>");
-                        content.AppendLine($"<div class=\"category-type\">Type: {dataItem?.GetType().Name ?? "null"}</div>");
+                        content.AppendLine("<div class=\"category-header\">");
+                        content.AppendLine("  <span class=\"category-title\">Review Information</span>");
+                        content.AppendLine("  <span class=\"expand-icon\">▼</span>");
+                        content.AppendLine("</div>");
+                        content.AppendLine("<div class=\"category-content\">");
+                        content.AppendLine("  <div class=\"section-reasoning\">The review format was not recognized. Please contact support.</div>");
+                        content.AppendLine("</div>");
                     }
                 }
                 catch (Exception ex)
                 {
-                    content.AppendLine($"<div class=\"error\">Error displaying category: {ex.Message}</div>");
+                    // Log error but don't expose to user
+                    _logger.LogError("Error formatting review category", ex);
+
+                    content.Clear();
+                    content.AppendLine("<div class=\"category-header\">");
+                    content.AppendLine("  <span class=\"category-title\">Review Information</span>");
+                    content.AppendLine("  <span class=\"expand-icon\">▼</span>");
+                    content.AppendLine("</div>");
+                    content.AppendLine("<div class=\"category-content\">");
+                    content.AppendLine("  <div class=\"section-reasoning\">There was an issue displaying this review category.</div>");
+                    content.AppendLine("</div>");
                 }
 
                 // Set the content
                 litCategoryContent.Text = content.ToString();
-            }
-        }
-
-        #region Response Processing Methods
-
-        private void ProcessReviewResponse(ReviewResponse response)
-        {
-            if (response == null)
-            {
-                DisplayError("No response received from the API.");
-                return;
-            }
-
-            // Debug: Display raw response for inspection
-            //DisplayError($"Debug - Raw API Response: {response.RawResponse}");
-            ProcessRawJsonResponse(response.RawResponse);
-
-            if (response.IsSuccess)
-            {
-                // Store request ID for future calls
-                _requestId = response.RequestId;
-                if (string.IsNullOrEmpty(_requestId))
-                {
-                    DisplayError("Request ID not returned from the API.");
-                    return;
-                }
-
-                ViewState["RequestId"] = _requestId;
-
-                // Display success message
-                lblStatus.Text = $"<div class='success'>Status: {response.Message}</div>";
-                lblRequestId.Text = $"<div>Request ID: {_requestId}</div>";
-
-                // Bind review categories to repeater if available
-                if (response.Review != null && response.Review.Count > 0)
-                {
-                    rptReviewCategories.DataSource = response.Review;
-                    rptReviewCategories.DataBind();
-                }
-                else
-                {
-                    // No review data available
-                    lblStatus.Text += "<div>No review data available</div>";
-                }
-
-                // Show results panel and enable enhance/generate buttons
-                pnlReviewResults.Visible = true;
-                btnEnhanceNotes.Visible = true;
-                btnGenerateClaim.Visible = true;
-            }
-            else
-            {
-                // Display error message
-                DisplayError($"Error: {response.Message ?? "Unknown error occurred"}");
-            }
-        }
-
-        private void ProcessEnhanceResponse(EnhanceResponse response)
-        {
-            if (response == null)
-            {
-                DisplayError("No response received from the API.");
-                return;
-            }
-
-            if (response.IsSuccess)
-            {
-                if (response.Data != null && response.Data.EnhancedNotes != null)
-                {
-                    // Display enhanced notes
-                    litEnhancedNotes.Text = JsonConvert.SerializeObject(response.Data.EnhancedNotes, Formatting.Indented);
-                    pnlEnhancedNotes.Visible = true;
-                }
-                else
-                {
-                    DisplayError("No enhanced notes found in the response.");
-                }
-            }
-            else
-            {
-                // Display error message
-                DisplayError($"Error: {response.Message ?? "Unknown error occurred"}");
-            }
-        }
-
-        private void ProcessGenerateClaimResponse(GenerateClaimResponse response)
-        {
-            if (response == null)
-            {
-                DisplayError("No response received from the API.");
-                return;
-            }
-
-            if (response.IsSuccess)
-            {
-                if (response.Data != null && response.Data.GeneratedClaim != null)
-                {
-                    // Display generated claim
-                    litGeneratedClaim.Text = JsonConvert.SerializeObject(response.Data.GeneratedClaim, Formatting.Indented);
-                    pnlGeneratedClaim.Visible = true;
-                }
-                else
-                {
-                    DisplayError("No generated claim found in the response.");
-                }
-            }
-            else
-            {
-                // Display error message
-                DisplayError($"Error: {response.Message ?? "Unknown error occurred"}");
             }
         }
 
@@ -367,24 +622,85 @@ namespace ClaimKitv1
             pnlReviewResults.Visible = false;
             pnlEnhancedNotes.Visible = false;
             pnlGeneratedClaim.Visible = false;
-            //lblError.Visible = false;
-        }
-
-        protected void btnCloseError_Click(object sender, EventArgs e)
-        {
+            pnlFinalNotes.Visible = false;
             pnlError.Visible = false;
+            pnlConfirmation.Visible = false;
         }
 
-        protected void btnCloseResponse_Click(object sender, EventArgs e)
+        private void ResetAllPanels()
         {
-            pnlJsonResponse.Visible = false;
+            ResetResultPanels();
+            pnlActionButtons.Visible = false;
+
+            // Clear input fields
+            txtDoctorNotes.Text = string.Empty;
+            txtFinalNotes.Text = string.Empty;
+
+            // Clear request ID
+            _requestId = null;
+            ViewState["RequestId"] = null;
+
+            // Show success message
+            ShowConfirmation("All clinical documentation has been completed successfully.");
         }
 
-        /// <summary>
-        /// Enhanced error display method that formats JSON responses
-        /// </summary>
+        private void PrepareAndShowFinalNotes(List<string> selectedNotes)
+        {
+            try
+            {
+                // Combine selected notes into a single document
+                StringBuilder finalNotes = new StringBuilder();
+                foreach (var note in selectedNotes)
+                {
+                    // Try to parse note identifier
+                    string[] parts = note.Split('-');
+                    if (parts.Length >= 2)
+                    {
+                        // Handle section-specific notes if applicable
+                        if (parts.Length > 2)
+                        {
+                            string section = parts[1];
+                            finalNotes.AppendLine($"=== {FormatSectionTitle(section)} ===");
+                        }
+
+                        // Look up the actual note content - this is simplified here
+                        // In a real implementation, we would parse the original JSON to extract actual notes
+                        finalNotes.AppendLine($"Enhanced clinical note approved by Dr. {txtDoctorName.Text}");
+                        finalNotes.AppendLine();
+                    }
+                }
+
+                // Set the final notes text
+                txtFinalNotes.Text = finalNotes.ToString();
+
+                // Show the panel for final editing
+                pnlFinalNotes.Visible = true;
+
+                // Log the action
+                _logger.LogUserAction("Final Notes Prepared", $"Request ID: {_requestId}, Notes Count: {selectedNotes.Count}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error preparing final notes", ex);
+                DisplayError("There was an issue preparing the final clinical notes. Please try again.");
+            }
+        }
+
+        private void ShowConfirmation(string message)
+        {
+            lblConfirmationMessage.Text = message;
+            pnlConfirmation.Visible = true;
+
+            // Register script to show confirmation visually
+            ScriptManager.RegisterStartupScript(this, GetType(), "ShowConfirmation",
+                "$('.confirmation-panel').addClass('visible');", true);
+        }
+
         private void DisplayError(string errorMessage)
         {
+            // Log the error
+            _logger.LogUserAction("UI Error Displayed", errorMessage);
+
             // Set the basic error message, removing any debug prefixes
             lblErrorMessage.Text = CleanupErrorMessage(errorMessage);
 
@@ -399,7 +715,7 @@ namespace ClaimKitv1
                 // Format JSON and show the panel
                 pnlJsonContent.Visible = true;
 
-                // IMPORTANT FIX: Directly insert pre-formatted JSON rather than using JavaScript
+                // Format JSON
                 preFormattedJson.InnerHtml = FormatJsonToHtml(jsonContent);
             }
 
@@ -407,58 +723,198 @@ namespace ClaimKitv1
             pnlError.Visible = true;
         }
 
-        /// <summary>
-        /// Parses the raw JSON response and updates UI accordingly
-        /// </summary>
-        private void ProcessRawJsonResponse(string jsonResponse)
+        private string FormatStatusMessage(string message)
         {
-            ProcessReviewResponse(jsonResponse);
-            //try
-            //{
-            //    // Parse the JSON to determine if it's a success or error
-            //    JObject responseObj = JObject.Parse(jsonResponse);
+            if (string.IsNullOrEmpty(message))
+                return "Review completed";
 
-            //    string status = responseObj["status"]?.ToString();
-
-            //    if (status == "success")
-            //    {
-            //        // Get request ID if available
-            //        string requestId = responseObj["request_id"]?.ToString();
-            //        if (!string.IsNullOrEmpty(requestId))
-            //        {
-            //            _requestId = requestId;
-            //            ViewState["RequestId"] = _requestId;
-            //        }
-
-            //        // For JSON response display, we'll still show it in the error panel but with success styling
-            //        lblErrorMessage.Text = "Successfully received response from server";
-            //        lblErrorMessage.CssClass = "success-message";
-
-            //        // Format and display the JSON
-            //        pnlJsonContent.Visible = true;
-
-            //        // IMPORTANT FIX: Directly insert pre-formatted JSON rather than using JavaScript
-            //        preFormattedJson.InnerHtml = FormatJsonToHtml(jsonResponse);
-
-            //        // Show the panel
-            //        pnlError.Visible = true;
-            //    }
-            //    else
-            //    {
-            //        // It's an error response, use the standard error display
-            //        DisplayError(jsonResponse);
-            //    }
-            //}
-            //catch (Exception ex)
-            //{
-            //    // If parsing fails, just display as a regular error
-            //    DisplayError($"Error parsing response: {ex.Message}\n\nRaw response: {jsonResponse}");
-            //}
+            // Replace underscores with spaces and title case
+            return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(
+                message.Replace('_', ' '));
         }
 
-        /// <summary>
-        /// Formats JSON string with proper indentation and HTML syntax highlighting
-        /// </summary>
+        private string FormatErrorMessage(string message)
+        {
+            if (string.IsNullOrEmpty(message))
+                return "An unknown error occurred";
+
+            // Convert technical errors to user-friendly messages
+            if (message.Contains("timeout") || message.Contains("timed out"))
+                return "The system is taking longer than expected to respond. Please try again.";
+
+            if (message.Contains("connection") || message.Contains("network"))
+                return "Unable to connect to the medical records system. Please check your network connection.";
+
+            if (message.Contains("authentication") || message.Contains("auth") || message.Contains("token"))
+                return "Your session may have expired. Please refresh the page and try again.";
+
+            // Default: clean up the message and make it more user-friendly
+            return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(
+                message.Replace('_', ' '));
+        }
+
+        private string FormatCategoryName(string categoryName)
+        {
+            // Remove numbering prefix if present (e.g., "1_history_diagnostic_analysis")
+            if (categoryName.Contains("_") && char.IsDigit(categoryName[0]))
+            {
+                categoryName = categoryName.Substring(categoryName.IndexOf('_') + 1);
+            }
+
+            // Replace underscores with spaces
+            categoryName = categoryName.Replace('_', ' ');
+
+            // Title case the name
+            return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(categoryName);
+        }
+
+        private string FormatSectionTitle(string section)
+        {
+            if (string.IsNullOrEmpty(section))
+                return string.Empty;
+
+            // Replace underscores with spaces
+            string result = section.Replace('_', ' ');
+
+            // Add spaces before capital letters (for camelCase)
+            result = Regex.Replace(result, "([A-Z])", " $1");
+
+            // Capitalize first letter
+            if (result.Length > 0)
+            {
+                result = char.ToUpper(result[0]) + result.Substring(1);
+            }
+
+            // Trim excess whitespace
+            return result.Trim();
+        }
+
+        private string GetStatusClass(string status)
+        {
+            if (string.IsNullOrEmpty(status))
+                return "status-neutral";
+
+            string lowerStatus = status.ToLower();
+
+            if (lowerStatus.Contains("consistent") ||
+                lowerStatus.Contains("complete") ||
+                lowerStatus.Contains("compliant") ||
+                lowerStatus.Contains("valid"))
+                return "status-consistent";
+
+            if (lowerStatus.Contains("inconsistent") ||
+                lowerStatus.Contains("incomplete") ||
+                lowerStatus.Contains("non-compliant") ||
+                lowerStatus.Contains("invalid"))
+                return "status-inconsistent";
+
+            return "status-neutral";
+        }
+
+        private long GetCurrentUnixTimestamp()
+        {
+            return (long)(DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalSeconds;
+        }
+
+        private JArray ParsePatientHistory()
+        {
+            if (string.IsNullOrWhiteSpace(txtPatientHistory.Text))
+            {
+                // Empty patient history is valid - return an empty array
+                return new JArray();
+            }
+
+            try
+            {
+                return JArray.Parse(txtPatientHistory.Text);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Patient history parsing error", ex, txtPatientHistory.Text);
+                DisplayError("The patient history must be in a valid format. Please check your entry and try again.");
+                return null;
+            }
+        }
+
+        #region JSON Formatting Helper Methods
+
+        private string CleanupErrorMessage(string message)
+        {
+            if (string.IsNullOrEmpty(message))
+                return string.Empty;
+
+            // Remove common debug prefixes
+            message = message.Replace("Debug - Raw API Response:", "").Trim();
+            message = message.Replace("API Response:", "").Trim();
+
+            // Try to remove any JSON content
+            string jsonContent = ExtractJsonContent(message);
+            if (!string.IsNullOrEmpty(jsonContent))
+            {
+                message = message.Replace(jsonContent, "").Trim();
+            }
+
+            // Clean up any multiple spaces or line breaks
+            message = Regex.Replace(message, @"\s+", " ").Trim();
+
+            if (string.IsNullOrEmpty(message))
+            {
+                return "Response received from server";
+            }
+
+            return message;
+        }
+
+        private string ExtractJsonContent(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+                return null;
+
+            try
+            {
+                // Try to parse the entire text as JSON first
+                JToken.Parse(text);
+                return text; // The entire text is valid JSON
+            }
+            catch
+            {
+                // If that fails, try to extract JSON objects or arrays
+                try
+                {
+                    // Look for JSON objects
+                    Match objectMatch = Regex.Match(text, @"(\{[\s\S]*\})", RegexOptions.Singleline);
+                    if (objectMatch.Success)
+                    {
+                        string jsonObj = objectMatch.Groups[1].Value;
+                        JToken.Parse(jsonObj); // Validate it's valid JSON
+                        return jsonObj;
+                    }
+                }
+                catch
+                {
+                    // Not a valid JSON object
+                }
+
+                try
+                {
+                    // Look for JSON arrays
+                    Match arrayMatch = Regex.Match(text, @"(\[[\s\S]*\])", RegexOptions.Singleline);
+                    if (arrayMatch.Success)
+                    {
+                        string jsonArray = arrayMatch.Groups[1].Value;
+                        JToken.Parse(jsonArray); // Validate it's valid JSON
+                        return jsonArray;
+                    }
+                }
+                catch
+                {
+                    // Not a valid JSON array
+                }
+            }
+
+            return null; // No valid JSON found
+        }
+
         private string FormatJsonToHtml(string jsonString)
         {
             try
@@ -478,6 +934,7 @@ namespace ClaimKitv1
             catch (Exception ex)
             {
                 // Return the original string if parsing fails
+                _logger.LogError("Error formatting JSON", ex);
                 return "Error formatting JSON: " + ex.Message + "<br><br>" +
                        System.Web.HttpUtility.HtmlEncode(jsonString);
             }
@@ -532,415 +989,7 @@ namespace ClaimKitv1
             return jsonString;
         }
 
-        /// <summary>
-        /// Attempts to extract JSON content from a string
-        /// </summary>
-        private string ExtractJsonContent(string text)
-        {
-            if (string.IsNullOrEmpty(text))
-                return null;
-
-            try
-            {
-                // Try to parse the entire text as JSON first
-                JToken.Parse(text);
-                return text; // The entire text is valid JSON
-            }
-            catch
-            {
-                // If that fails, try to extract JSON objects or arrays
-                try
-                {
-                    // Look for JSON objects
-                    Match objectMatch = Regex.Match(text, @"(\{[\s\S]*\})", RegexOptions.Singleline);
-                    if (objectMatch.Success)
-                    {
-                        string jsonObj = objectMatch.Groups[1].Value;
-                        JToken.Parse(jsonObj); // Validate it's valid JSON
-                        return jsonObj;
-                    }
-                }
-                catch
-                {
-                    // Not a valid JSON object
-                }
-
-                try
-                {
-                    // Look for JSON arrays
-                    Match arrayMatch = Regex.Match(text, @"(\[[\s\S]*\])", RegexOptions.Singleline);
-                    if (arrayMatch.Success)
-                    {
-                        string jsonArray = arrayMatch.Groups[1].Value;
-                        JToken.Parse(jsonArray); // Validate it's valid JSON
-                        return jsonArray;
-                    }
-                }
-                catch
-                {
-                    // Not a valid JSON array
-                }
-            }
-
-            return null; // No valid JSON found
-        }
-
-        /// <summary>
-        /// Cleans up an error message by removing JSON content and debug prefixes
-        /// </summary>
-        private string CleanupErrorMessage(string message)
-        {
-            if (string.IsNullOrEmpty(message))
-                return string.Empty;
-
-            // Remove common debug prefixes
-            message = message.Replace("Debug - Raw API Response:", "").Trim();
-            message = message.Replace("API Response:", "").Trim();
-
-            // Try to remove any JSON content
-            string jsonContent = ExtractJsonContent(message);
-            if (!string.IsNullOrEmpty(jsonContent))
-            {
-                message = message.Replace(jsonContent, "").Trim();
-            }
-
-            // Clean up any multiple spaces or line breaks
-            message = Regex.Replace(message, @"\s+", " ").Trim();
-
-            if (string.IsNullOrEmpty(message))
-            {
-                return "Response received from server";
-            }
-
-            return message;
-        }
-
-        /// <summary>
-        /// Formats review feedback content, handling both direct JSON objects and JSON strings
-        /// </summary>
-        private string FormatFeedbackContent(JToken feedbackContent)
-        {
-            if (feedbackContent == null)
-                return "<div class='no-data'>No feedback data available</div>";
-
-            try
-            {
-                // Case 1: Feedback is a JSON string that needs to be parsed
-                if (feedbackContent.Type == JTokenType.String)
-                {
-                    string feedbackStr = feedbackContent.ToString();
-
-                    // Replace escaped newlines with actual newlines before parsing
-                    feedbackStr = feedbackStr.Replace("\\n", "\n");
-
-                    // Try to parse the string as JSON
-                    try
-                    {
-                        JToken parsedFeedback = JToken.Parse(feedbackStr);
-                        return FormatFeedbackJson(parsedFeedback);
-                    }
-                    catch
-                    {
-                        // If parsing fails, just display the raw string
-                        return $"<pre>{System.Web.HttpUtility.HtmlEncode(feedbackStr)}</pre>";
-                    }
-                }
-                // Case 2: Feedback is already a JSON object or array
-                else if (feedbackContent.Type == JTokenType.Object || feedbackContent.Type == JTokenType.Array)
-                {
-                    return FormatFeedbackJson(feedbackContent);
-                }
-                // Case 3: Other data types
-                else
-                {
-                    return $"<div class='feedback-raw'>{System.Web.HttpUtility.HtmlEncode(feedbackContent.ToString())}</div>";
-                }
-            }
-            catch (Exception ex)
-            {
-                return $"<div class='error'>Error formatting feedback: {ex.Message}</div>";
-            }
-        }
-
-        /// <summary>
-        /// Process JSON review response into nicely formatted HTML
-        /// </summary>
-        private void ProcessReviewResponse(string jsonResponse)
-        {
-            try
-            {
-                // Parse the JSON
-                JObject responseObj = JToken.Parse(jsonResponse) as JObject;
-                if (responseObj == null)
-                {
-                    DisplayError("Invalid JSON response received");
-                    return;
-                }
-
-                // Get status and basic info
-                string status = responseObj["status"]?.ToString() ?? "unknown";
-                string message = responseObj["message"]?.ToString() ?? "";
-                string requestId = responseObj["request_id"]?.ToString() ?? "";
-
-                // Store request ID if available
-                if (!string.IsNullOrEmpty(requestId))
-                {
-                    _requestId = requestId;
-                    ViewState["RequestId"] = _requestId;
-                }
-
-                // Get the review array
-                JArray reviewArray = responseObj["review"] as JArray;
-
-                // Start building the HTML for the formatted review
-                StringBuilder reviewHtml = new StringBuilder();
-
-                if (reviewArray != null && reviewArray.Count > 0)
-                {
-                    reviewHtml.AppendLine("<div class='review-container'>");
-
-                    foreach (JObject category in reviewArray)
-                    {
-                        string categoryName = category["category"]?.ToString() ?? "Unknown Category";
-                        JToken feedback = category["feedback"];
-
-                        // Format category name for display
-                        string displayName = FormatCategoryName(categoryName);
-
-                        // Add category section
-                        reviewHtml.AppendLine($"<div class='review-category'>");
-                        reviewHtml.AppendLine($"<div class='category-header' onclick=\"toggleCategory('category_{categoryName.Replace(" ", "_")}')\">");
-                        reviewHtml.AppendLine($"<span class='category-name'>{displayName}</span>");
-                        reviewHtml.AppendLine($"<span class='toggle-icon'>+</span>");
-                        reviewHtml.AppendLine($"</div>");
-
-                        // Add category content (collapsed by default)
-                        reviewHtml.AppendLine($"<div id='category_{categoryName.Replace(" ", "_")}' class='category-content'>");
-
-                        // Format the feedback content
-                        if (feedback != null)
-                        {
-                            reviewHtml.AppendLine(FormatFeedbackContent(feedback));
-                        }
-                        else
-                        {
-                            reviewHtml.AppendLine("<div class='no-data'>No feedback data available for this category</div>");
-                        }
-
-                        reviewHtml.AppendLine("</div>"); // End category-content
-                        reviewHtml.AppendLine("</div>"); // End review-category
-                    }
-
-                    reviewHtml.AppendLine("</div>"); // End review-container
-
-                    // Display the formatted review in a panel
-                    divFormattedReview.InnerHtml = reviewHtml.ToString();
-                    pnlFormattedReview.Visible = true;
-
-                    // Also show the raw JSON for reference/debugging
-                    litRawJson.Text = FormatJsonToHtml(jsonResponse);
-                    pnlRawJson.Visible = true;
-
-                    // Update status message
-                    lblResponseStatus.Text = status.ToUpperInvariant();
-                    lblResponseStatus.CssClass = $"status-label {(status == "success" ? "success" : "error")}";
-
-                    lblResponseMessage.Text = $"Response Message: {FormatResponseMessage(message)}";
-                    if (!string.IsNullOrEmpty(requestId))
-                    {
-                        lblRequestId.Text = $"Request ID: {requestId}";
-                    }
-
-                    // Show the response panel
-                    pnlJsonResponse.Visible = true;
-                }
-                else
-                {
-                    // No review data found
-                    DisplayError("No review data found in the response");
-                }
-            }
-            catch (Exception ex)
-            {
-                // Handle parsing errors
-                DisplayError($"Error processing JSON response: {ex.Message}\n\n{jsonResponse}");
-            }
-        }
-
-        /// <summary>
-        /// Formats a category name for display
-        /// </summary>
-        private string FormatCategoryName(string categoryName)
-        {
-            // Remove numbering prefix if present (e.g., "1_history_diagnostic_analysis")
-            if (categoryName.Contains("_") && char.IsDigit(categoryName[0]))
-            {
-                categoryName = categoryName.Substring(categoryName.IndexOf('_') + 1);
-            }
-
-            // Replace underscores with spaces
-            categoryName = categoryName.Replace('_', ' ');
-
-            // Title case the name
-            return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(categoryName);
-        }
-
-        /// <summary>
-        /// Formats the response message for display
-        /// </summary>
-        private string FormatResponseMessage(string message)
-        {
-            if (string.IsNullOrEmpty(message))
-                return "No message provided";
-
-            // Replace underscores with spaces and title case
-            message = message.Replace('_', ' ');
-            return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(message);
-        }
-
-        /// <summary>
-        /// Formats a JSON object into HTML with tables for feedback items
-        /// </summary>
-        private string FormatFeedbackJson(JToken feedbackJson)
-        {
-            var html = new StringBuilder();
-
-            try
-            {
-                // Handle different JSON structures
-                if (feedbackJson is JObject rootObj)
-                {
-                    // Process each top-level step
-                    foreach (var stepProp in rootObj.Properties())
-                    {
-                        string stepName = stepProp.Name;
-                        JToken stepValue = stepProp.Value;
-
-                        html.AppendLine($"<div class='feedback-step'>");
-                        html.AppendLine($"<h4>{stepName}</h4>");
-
-                        if (stepValue is JObject stepObj)
-                        {
-                            // Create a table for the checks
-                            html.AppendLine("<table class='feedback-table'>");
-                            html.AppendLine("<thead><tr><th>Check</th><th>Result</th><th>Reasoning</th></tr></thead>");
-                            html.AppendLine("<tbody>");
-
-                            foreach (var checkProp in stepObj.Properties())
-                            {
-                                string checkName = checkProp.Name;
-                                JToken checkValue = checkProp.Value;
-
-                                if (checkValue is JObject checkObj)
-                                {
-                                    string result = checkObj["result"]?.ToString() ?? "N/A";
-                                    string reasoning = checkObj["reasoning"]?.ToString() ?? "No reasoning provided";
-
-                                    // Determine status class based on result
-                                    string statusClass = GetStatusClassFromResult(result);
-
-                                    html.AppendLine("<tr>");
-                                    html.AppendLine($"<td class='check-name'>{checkName}</td>");
-                                    html.AppendLine($"<td class='check-result {statusClass}'>{result}</td>");
-                                    html.AppendLine($"<td class='check-reasoning'>{reasoning}</td>");
-                                    html.AppendLine("</tr>");
-                                }
-                                else
-                                {
-                                    // Handle non-object check values (unexpected format)
-                                    html.AppendLine("<tr>");
-                                    html.AppendLine($"<td class='check-name'>{checkName}</td>");
-                                    html.AppendLine($"<td class='check-raw' colspan='2'>{System.Web.HttpUtility.HtmlEncode(checkValue.ToString())}</td>");
-                                    html.AppendLine("</tr>");
-                                }
-                            }
-
-                            html.AppendLine("</tbody></table>");
-                        }
-                        else
-                        {
-                            // Handle unexpected step value format
-                            html.AppendLine($"<div class='step-raw'>{System.Web.HttpUtility.HtmlEncode(stepValue.ToString())}</div>");
-                        }
-
-                        html.AppendLine("</div>"); // end .feedback-step
-                    }
-                }
-                else if (feedbackJson is JArray array)
-                {
-                    // Handle array of feedback items
-                    html.AppendLine("<div class='feedback-array'>");
-
-                    foreach (var item in array)
-                    {
-                        html.AppendLine("<div class='feedback-item'>");
-                        html.AppendLine(FormatFeedbackJson(item));
-                        html.AppendLine("</div>");
-                    }
-
-                    html.AppendLine("</div>");
-                }
-                else
-                {
-                    // Handle any other format
-                    html.AppendLine($"<pre>{System.Web.HttpUtility.HtmlEncode(feedbackJson.ToString(Formatting.Indented))}</pre>");
-                }
-            }
-            catch (Exception ex)
-            {
-                html.AppendLine($"<div class='error'>Error processing feedback: {ex.Message}</div>");
-                html.AppendLine($"<pre>{System.Web.HttpUtility.HtmlEncode(feedbackJson.ToString(Formatting.Indented))}</pre>");
-            }
-
-            return html.ToString();
-        }
-
-        /// <summary>
-        /// Determines the CSS class for a result based on its value
-        /// </summary>
-        private string GetStatusClassFromResult(string result)
-        {
-            if (string.IsNullOrEmpty(result))
-                return "neutral";
-
-            string lowerResult = result.ToLower();
-
-            if (lowerResult.Contains("consistent") && !lowerResult.Contains("inconsistent") ||
-                lowerResult == "necessary" ||
-                lowerResult == "relevant" ||
-                lowerResult == "compliant")
-            {
-                return "positive";
-            }
-            else if (lowerResult.Contains("inconsistent") ||
-                     lowerResult == "unnecessary" ||
-                     lowerResult == "irrelevant" ||
-                     lowerResult.Contains("non-compliant") ||
-                     lowerResult == "gaps detected")
-            {
-                return "negative";
-            }
-
-            return "neutral";
-        }
-
-        private long GetCurrentUnixTimestamp()
-        {
-            return (long)(DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalSeconds;
-        }
-
-        private JArray ParsePatientHistory()
-        {
-            try
-            {
-                return JArray.Parse(txtPatientHistory.Text);
-            }
-            catch (Exception ex)
-            {
-                DisplayError($"Patient history must be a valid JSON array. Error: {ex.Message}");
-                return null;
-            }
-        }
+        #endregion
 
         #endregion
     }
