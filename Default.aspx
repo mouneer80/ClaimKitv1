@@ -4,7 +4,7 @@
 
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head runat="server">
-    <title>ClaimKitv1 - Medical Claims Processing</title>
+    <title>ClaimKit - Medical Documentation Assistant</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="Content/css/styles.css" />
     <link rel="stylesheet" href="Content/css/modal-styles.css" />
@@ -13,7 +13,7 @@
     <form id="form1" runat="server">
         <div class="header">
             <div class="container">
-                <h1>ClaimKitv1 - Medical Claims Processing</h1>
+                <h1>ClaimKit - Medical Documentation Assistant</h1>
             </div>
         </div>
         
@@ -21,7 +21,7 @@
             <!-- Loading Indicator -->
             <div id="loadingIndicator" style="display:none;" class="loading-indicator">
                 <div class="spinner"></div>
-                <div>Processing... Please wait</div>
+                <div>Processing your request... Please wait</div>
             </div> 
             
             <!-- Form Section -->
@@ -42,8 +42,8 @@
                 
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="txtPolicyBand">Policy Band:</label>
-                        <asp:TextBox ID="txtPolicyBand" runat="server" CssClass="form-control" placeholder="Enter policy band"></asp:TextBox>
+                        <label for="txtPolicyBand">Policy Type:</label>
+                        <asp:TextBox ID="txtPolicyBand" runat="server" CssClass="form-control" placeholder="Enter policy type"></asp:TextBox>
                     </div>
                     
                     <div class="form-group">
@@ -52,64 +52,66 @@
                     </div>
                 </div>
                 
-                <h2>Doctor Information</h2>
+                <h2>Clinician Information</h2>
                 
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="txtDoctorName">Doctor Name:</label>
-                        <asp:TextBox ID="txtDoctorName" runat="server" CssClass="form-control" placeholder="Enter doctor name"></asp:TextBox>
+                        <label for="txtDoctorName">Clinician Name:</label>
+                        <asp:TextBox ID="txtDoctorName" runat="server" CssClass="form-control" placeholder="Enter your name"></asp:TextBox>
                     </div>
                     
                     <div class="form-group">
                         <label for="txtDoctorSpecialization">Specialization:</label>
-                        <asp:TextBox ID="txtDoctorSpecialization" runat="server" CssClass="form-control" placeholder="Enter specialization"></asp:TextBox>
+                        <asp:TextBox ID="txtDoctorSpecialization" runat="server" CssClass="form-control" placeholder="Enter your specialization"></asp:TextBox>
                     </div>
                     
                     <div class="form-group">
-                        <label for="txtDoctorId">Doctor ID:</label>
-                        <asp:TextBox ID="txtDoctorId" runat="server" CssClass="form-control" placeholder="Enter doctor ID"></asp:TextBox>
+                        <label for="txtDoctorId">Clinician ID:</label>
+                        <asp:TextBox ID="txtDoctorId" runat="server" CssClass="form-control" placeholder="Enter your ID"></asp:TextBox>
                     </div>
                 </div>
                 
-                <h2>Medical Information</h2>
+                <h2>Clinical Information</h2>
 
                 <div class="form-group">
-                    <label for="txtPatientHistory">Patient History (JSON format):</label>
-                    <div class="input-tooltip" data-tooltip="Enter patient history in JSON format. Each entry should include date, doctor, diagnosis, and treatment.">
+                    <label for="txtPatientHistory">Patient History:</label>
+                    <div class="input-tooltip" data-tooltip="Enter previous patient history. Each entry should include date, clinician, diagnosis, and treatment.">
                         <span class="tooltip-icon">ⓘ</span>
                     </div>
-                    <asp:TextBox ID="txtPatientHistory" runat="server" CssClass="form-control" TextMode="MultiLine" Rows="6" placeholder='[{"date": "DD/MM/YYYY", "doctor": "Dr. Name", "diagnosis": "Diagnosis", "treatment": "Treatment"}]'></asp:TextBox>
+                    <asp:TextBox ID="txtPatientHistory" runat="server" CssClass="form-control" TextMode="MultiLine" Rows="6" placeholder='[{"date": "MM/DD/YYYY", "doctor": "Dr. Name", "diagnosis": "Diagnosis", "treatment": "Treatment"}]'></asp:TextBox>
                 </div>
                 
                 <div class="form-group">
-                    <label for="txtDoctorNotes">Doctor Notes: <span class="required">*</span></label>
-                    <asp:TextBox ID="txtDoctorNotes" runat="server" CssClass="form-control" TextMode="MultiLine" Rows="6" placeholder="Enter detailed doctor notes"></asp:TextBox>
+                    <label for="txtDoctorNotes">Clinical Notes: <span class="required">*</span></label>
+                    <asp:TextBox ID="txtDoctorNotes" runat="server" CssClass="form-control" TextMode="MultiLine" Rows="8" placeholder="Enter your detailed clinical notes here"></asp:TextBox>
                 </div>
 
                 <div class="btn-group">
-                    <asp:Button ID="btnReviewNotes" runat="server" Text="Review Notes" CssClass="btn btn-primary action-button" OnClick="btnReviewNotes_Click" />
+                    <asp:Button ID="btnReviewNotes" runat="server" Text="Review Clinical Notes" CssClass="btn btn-primary action-button" OnClick="btnReviewNotes_Click" />
                 </div>
             </div>
             
             <!-- Action Buttons Section (when review is complete) -->
             <asp:Panel ID="pnlActionButtons" runat="server" CssClass="action-buttons" Visible="false">
                 <div class="btn-group">
-                    <asp:Button ID="btnViewResults" runat="server" Text="View Results" CssClass="btn btn-primary action-button" OnClientClick="showReviewResultsModal(); return false;" />
-                    <asp:Button ID="btnEnhanceNotes" runat="server" Text="Enhance Notes" CssClass="btn btn-primary action-button" OnClick="btnEnhanceNotes_Click" />
-                    <asp:Button ID="btnGenerateClaim" runat="server" Text="Generate Claim" CssClass="btn btn-primary action-button" OnClick="btnGenerateClaim_Click" />
+                    <asp:Button ID="btnViewResults" runat="server" Text="View Review Results" CssClass="btn btn-primary action-button" OnClientClick="showReviewResultsModal(); return false;" />
+                    <asp:Button ID="btnEnhanceNotes" runat="server" Text="Enhance Clinical Notes" CssClass="btn btn-primary action-button" OnClick="btnEnhanceNotes_Click" />
+                    <asp:Button ID="btnGenerateClaim" runat="server" Text="Generate Insurance Claim" CssClass="btn btn-primary action-button" OnClick="btnGenerateClaim_Click" />
                 </div>
             </asp:Panel>
             
             <!-- Hidden Review Results Section (will be shown as popup) -->
             <asp:Panel ID="pnlReviewResults" runat="server" CssClass="result-panel" Visible="false">
-                <h2>Review Results</h2>
-                
                 <div class="review-info">
+                    <div class="review-explanation">
+                        <p>Your clinical notes have been reviewed for completeness, accuracy, and insurance compatibility.</p>
+                        <p>Please review the feedback below to ensure your documentation meets all standards and requirements.</p>
+                    </div>
                     <asp:Label ID="lblStatus" runat="server" CssClass="status-info"></asp:Label>
                     <asp:Label ID="lblRequestId" runat="server" CssClass="request-info"></asp:Label>
                 </div>
                 
-                <h3>Review Categories</h3>
+                <h3>Clinical Documentation Review</h3>
                 <div class="categories-container">
                     <asp:Repeater ID="rptReviewCategories" runat="server" OnItemDataBound="rptReviewCategories_ItemDataBound">
                         <ItemTemplate>
@@ -123,34 +125,53 @@
             
             <!-- Hidden Enhanced Notes Section (will be shown as popup) -->
             <asp:Panel ID="pnlEnhancedNotes" runat="server" CssClass="result-panel" Visible="false">
-                <h2>Enhanced Notes</h2>
                 <div class="result-content">
                     <asp:Literal ID="litEnhancedNotes" runat="server"></asp:Literal>
                 </div>
                 
-                <div class="btn-group">
-                    <asp:Button ID="btnViewResultsFromNotes" runat="server" Text="View Results" CssClass="btn btn-secondary action-button" OnClientClick="showReviewResultsModal(); return false;" />
-                    <asp:Button ID="btnGenerateClaimFromNotes" runat="server" Text="Generate Claim" CssClass="btn btn-primary action-button" OnClick="btnGenerateClaim_Click" />
-                </div>
+                <!-- Hidden field to store selections -->
+                <asp:HiddenField ID="hdnSelectedNotes" runat="server" />
+                
+                <!-- Hidden button to process server-side -->
+                <asp:Button ID="btnServerApproveNotes" runat="server" Text="Approve Notes" CssClass="hidden-button" OnClick="btnServerApproveNotes_Click" Style="display: none;" />
             </asp:Panel>
             
             <!-- Hidden Generated Claim Section (will be shown as popup) -->
             <asp:Panel ID="pnlGeneratedClaim" runat="server" CssClass="result-panel" Visible="false">
-                <h2>Generated Claim</h2>
                 <div class="result-content">
                     <asp:Literal ID="litGeneratedClaim" runat="server"></asp:Literal>
                 </div>
                 
+                <!-- Hidden field to store selections -->
+                <asp:HiddenField ID="hdnSelectedDiagnoses" runat="server" />
+                
+                <!-- Hidden button to process server-side -->
+                <asp:Button ID="btnServerApproveDiagnoses" runat="server" Text="Approve Diagnoses" CssClass="hidden-button" OnClick="btnServerApproveDiagnoses_Click" Style="display: none;" />
+                
+                <!-- Hidden button for generating claim from enhanced notes -->
+                <asp:Button ID="btnGenerateClaimFromNotes" runat="server" Text="Generate Claim" CssClass="hidden-button" OnClick="btnGenerateClaim_Click" Style="display: none;" />
+            </asp:Panel>
+
+            <!-- Final Notes Panel -->
+            <asp:Panel ID="pnlFinalNotes" runat="server" CssClass="result-panel" Visible="false">
+                <h2>Finalize Clinical Documentation</h2>
+                
+                <div class="form-group">
+                    <label for="txtFinalNotes">Final Clinical Notes:</label>
+                    <p class="note-instruction">Review and make any final edits to your clinical notes below before saving.</p>
+                    <asp:TextBox ID="txtFinalNotes" runat="server" CssClass="form-control" TextMode="MultiLine" Rows="12"></asp:TextBox>
+                </div>
+                
                 <div class="btn-group">
-                    <asp:Button ID="btnViewResultsFromClaim" runat="server" Text="View Results" CssClass="btn btn-secondary action-button" OnClientClick="showReviewResultsModal(); return false;" />
-                    <asp:Button ID="btnEnhanceNotesFromClaim" runat="server" Text="View Enhanced Notes" CssClass="btn btn-secondary action-button" OnClientClick="showEnhancedNotesModal(); return false;" />
+                    <asp:Button ID="btnSaveFinalNotes" runat="server" Text="Save & Submit Documentation" CssClass="btn btn-primary action-button" OnClick="btnSaveFinalNotes_Click" />
+                    <asp:Button ID="btnEditFinalNotes" runat="server" Text="Continue Editing" CssClass="btn btn-secondary action-button" OnClick="btnEditFinalNotes_Click" />
                 </div>
             </asp:Panel>
 
             <!-- Error Display -->
             <asp:Panel ID="pnlError" runat="server" CssClass="error-panel" Visible="false">
                 <div class="error-header">
-                    <span class="error-title">Response Information</span>
+                    <span class="error-title">System Message</span>
                     <asp:LinkButton ID="btnCloseError" runat="server" CssClass="close-button" OnClick="btnCloseError_Click" Text="×"></asp:LinkButton>
                 </div>
                 <div class="error-content">
@@ -158,7 +179,7 @@
         
                     <asp:Panel ID="pnlJsonContent" runat="server" CssClass="json-content expanded" Visible="false">
                         <div class="json-header">
-                            <span>Response Details</span>
+                            <span>Technical Details</span>
                             <asp:LinkButton ID="btnExpandCollapse" runat="server" CssClass="expand-collapse" OnClientClick="toggleJsonContent(); return false;">Collapse</asp:LinkButton>
                         </div>
                         <pre ID="preFormattedJson" runat="server" class="formatted-json"></pre>
@@ -166,35 +187,18 @@
                 </div>
             </asp:Panel>
 
-            <!-- JSON Response Panel -->
-            <asp:Panel ID="pnlJsonResponse" runat="server" CssClass="json-response-panel" Visible="false">
-                <div class="response-header">
-                    <div class="response-status">
-                        <asp:Label ID="lblResponseStatus" runat="server" CssClass="status-label"></asp:Label>
-                        <asp:Label ID="Label1" runat="server" CssClass="request-id"></asp:Label>
-                    </div>
-                    <asp:LinkButton ID="btnCloseResponse" runat="server" CssClass="close-button" OnClick="btnCloseResponse_Click" Text="×"></asp:LinkButton>
+            <!-- Confirmation Panel -->
+            <asp:Panel ID="pnlConfirmation" runat="server" CssClass="confirmation-panel" Visible="false">
+                <div class="confirmation-header">
+                    <span class="confirmation-title">Success</span>
+                    <asp:LinkButton ID="btnCloseConfirmation" runat="server" CssClass="close-button" OnClick="btnCloseConfirmation_Click" Text="×"></asp:LinkButton>
                 </div>
-                <div class="response-content">
-                    <div class="response-overview">
-                        <asp:Label ID="lblResponseMessage" runat="server"></asp:Label>
-                    </div>
-        
-                    <div class="response-tabs">
-                        <asp:LinkButton ID="btnTabReview" runat="server" CssClass="tab-button active" OnClientClick="showTab('review'); return false;">Formatted Review</asp:LinkButton>
-                        <asp:LinkButton ID="btnTabRaw" runat="server" CssClass="tab-button" OnClientClick="showTab('raw'); return false;">Raw JSON</asp:LinkButton>
-                    </div>
-        
-                    <div id="tab-review" class="tab-content active">
-                        <asp:Panel ID="pnlFormattedReview" runat="server" Visible="true">
-                            <div id="divFormattedReview" runat="server"></div>
-                        </asp:Panel>
-                    </div>
-        
-                    <div id="tab-raw" class="tab-content">
-                        <asp:Panel ID="pnlRawJson" runat="server" Visible="false">
-                            <pre class="json-code"><asp:Literal ID="litRawJson" runat="server"></asp:Literal></pre>
-                        </asp:Panel>
+                <div class="confirmation-content">
+                    <div class="confirmation-icon">✓</div>
+                    <asp:Label ID="lblConfirmationMessage" runat="server" CssClass="confirmation-message"></asp:Label>
+                    
+                    <div class="confirmation-actions">
+                        <asp:Button ID="btnConfirmationOk" runat="server" Text="OK" CssClass="btn btn-primary" OnClick="btnCloseConfirmation_Click" />
                     </div>
                 </div>
             </asp:Panel>
@@ -204,7 +208,7 @@
         
         <!-- Modal containers will be generated by JavaScript -->
         
-        <script src="Content/js/ClaimKitv1.js"></script>
+        <script src="Content/js/claimkit.js"></script>
         <script src="Content/js/ClaimKitv1-Modal.js"></script>
     </form>
 </body>

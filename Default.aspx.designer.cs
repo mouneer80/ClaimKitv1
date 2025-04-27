@@ -204,22 +204,22 @@ namespace ClaimKitv1
         protected global::System.Web.UI.WebControls.Literal litEnhancedNotes;
 
         /// <summary>
-        /// btnViewResultsFromNotes control.
+        /// hdnSelectedNotes control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Button btnViewResultsFromNotes;
+        protected global::System.Web.UI.WebControls.HiddenField hdnSelectedNotes;
 
         /// <summary>
-        /// btnGenerateClaimFromNotes control.
+        /// btnServerApproveNotes control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Button btnGenerateClaimFromNotes;
+        protected global::System.Web.UI.WebControls.Button btnServerApproveNotes;
 
         /// <summary>
         /// pnlGeneratedClaim control.
@@ -240,22 +240,67 @@ namespace ClaimKitv1
         protected global::System.Web.UI.WebControls.Literal litGeneratedClaim;
 
         /// <summary>
-        /// btnViewResultsFromClaim control.
+        /// hdnSelectedDiagnoses control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Button btnViewResultsFromClaim;
+        protected global::System.Web.UI.WebControls.HiddenField hdnSelectedDiagnoses;
 
         /// <summary>
-        /// btnEnhanceNotesFromClaim control.
+        /// btnServerApproveDiagnoses control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Button btnEnhanceNotesFromClaim;
+        protected global::System.Web.UI.WebControls.Button btnServerApproveDiagnoses;
+
+        /// <summary>
+        /// btnGenerateClaimFromNotes control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnGenerateClaimFromNotes;
+
+        /// <summary>
+        /// pnlFinalNotes control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Panel pnlFinalNotes;
+
+        /// <summary>
+        /// txtFinalNotes control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.TextBox txtFinalNotes;
+
+        /// <summary>
+        /// btnSaveFinalNotes control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnSaveFinalNotes;
+
+        /// <summary>
+        /// btnEditFinalNotes control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnEditFinalNotes;
 
         /// <summary>
         /// pnlError control.
@@ -312,102 +357,39 @@ namespace ClaimKitv1
         protected global::System.Web.UI.HtmlControls.HtmlGenericControl preFormattedJson;
 
         /// <summary>
-        /// pnlJsonResponse control.
+        /// pnlConfirmation control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Panel pnlJsonResponse;
+        protected global::System.Web.UI.WebControls.Panel pnlConfirmation;
 
         /// <summary>
-        /// lblResponseStatus control.
+        /// btnCloseConfirmation control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Label lblResponseStatus;
+        protected global::System.Web.UI.WebControls.LinkButton btnCloseConfirmation;
 
         /// <summary>
-        /// Label1 control.
+        /// lblConfirmationMessage control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Label Label1;
+        protected global::System.Web.UI.WebControls.Label lblConfirmationMessage;
 
         /// <summary>
-        /// btnCloseResponse control.
+        /// btnConfirmationOk control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.LinkButton btnCloseResponse;
-
-        /// <summary>
-        /// lblResponseMessage control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.Label lblResponseMessage;
-
-        /// <summary>
-        /// btnTabReview control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.LinkButton btnTabReview;
-
-        /// <summary>
-        /// btnTabRaw control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.LinkButton btnTabRaw;
-
-        /// <summary>
-        /// pnlFormattedReview control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.Panel pnlFormattedReview;
-
-        /// <summary>
-        /// divFormattedReview control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.HtmlControls.HtmlGenericControl divFormattedReview;
-
-        /// <summary>
-        /// pnlRawJson control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.Panel pnlRawJson;
-
-        /// <summary>
-        /// litRawJson control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.Literal litRawJson;
+        protected global::System.Web.UI.WebControls.Button btnConfirmationOk;
     }
 }

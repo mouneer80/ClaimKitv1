@@ -1,48 +1,77 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Net;
-using System.Text;
 using System.Threading.Tasks;
 using System.Web.Configuration;
 using ClaimKit_v1.Models.Responses;
 using ClaimKitv1.Models;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace ClaimKitv1.Services
 {
+    /// <summary>
+    /// Service for communicating with the ClaimKit API
+    /// </summary>
     public class ClaimKitApiService : IClaimKitApiService
     {
         private readonly string _apiUrl;
         private readonly int _timeout;
+        private readonly LoggingService _logger;
 
         public ClaimKitApiService()
         {
             _apiUrl = WebConfigurationManager.AppSettings["ClaimKitApiUrl"];
             _timeout = int.Parse(WebConfigurationManager.AppSettings["ApiTimeoutSeconds"]) * 1000;
+            _logger = LoggingService.Instance;
         }
 
+        /// <summary>
+        /// Sends a review request to analyze doctor's notes
+        /// </summary>
+        /// <param name="request">The review request object</param>
+        /// <returns>The API response</returns>
         public async Task<ReviewResponse> ReviewNotesAsync(ReviewRequest request)
         {
             var jsonPayload = JsonConvert.SerializeObject(request);
+            _logger.LogUserAction("Review Notes", $"Patient ID: {request.HospitalPatientId}, Doctor: {request.DoctorName}");
             return await CallApiAsync<ReviewResponse>(jsonPayload);
         }
 
+        /// <summary>
+        /// Sends a request to enhance doctor's notes
+        /// </summary>
+        /// <param name="request">The enhance request object</param>
+        /// <returns>The API response with enhanced notes</returns>
         public async Task<EnhanceResponse> EnhanceNotesAsync(EnhanceRequest request)
         {
             var jsonPayload = JsonConvert.SerializeObject(request);
+            _logger.LogUserAction("Enhance Notes", $"Request ID: {request.RequestId}");
             return await CallApiAsync<EnhanceResponse>(jsonPayload);
         }
 
+        /// <summary>
+        /// Sends a request to generate an insurance claim
+        /// </summary>
+        /// <param name="request">The generate claim request object</param>
+        /// <returns>The API response with generated claim data</returns>
         public async Task<GenerateClaimResponse> GenerateClaimAsync(GenerateClaimRequest request)
         {
             var jsonPayload = JsonConvert.SerializeObject(request);
+            _logger.LogUserAction("Generate Claim", $"Request ID: {request.RequestId}, Patient ID: {request.HospitalPatientId}");
             return await CallApiAsync<GenerateClaimResponse>(jsonPayload);
         }
 
+        /// <summary>
+        /// Generic method to call the API with the appropriate request and process the response
+        /// </summary>
+        /// <typeparam name="T">Response type to deserialize to</typeparam>
+        /// <param name="jsonPayload">The JSON payload to send</param>
+        /// <returns>The deserialized response object</returns>
         private async Task<T> CallApiAsync<T>(string jsonPayload) where T : BaseResponse, new()
         {
+            bool isSuccess = false;
+            string responseString = string.Empty;
+
             try
             {
                 // Create web request
@@ -60,9 +89,6 @@ namespace ClaimKitv1.Services
                     streamWriter.Flush();
                 }
 
-                // For debugging purposes
-                System.Diagnostics.Debug.WriteLine($"API Request: {jsonPayload}");
-
                 // Get response
                 try
                 {
@@ -74,10 +100,8 @@ namespace ClaimKitv1.Services
                         // Read response
                         using (var streamReader = new StreamReader(response.GetResponseStream()))
                         {
-                            var responseString = streamReader.ReadToEnd();
-
-                            // For debugging purposes
-                            System.Diagnostics.Debug.WriteLine($"API Response: {responseString}");
+                            responseString = streamReader.ReadToEnd();
+                            isSuccess = true;
 
                             try
                             {
@@ -91,11 +115,12 @@ namespace ClaimKitv1.Services
                             }
                             catch (JsonException ex)
                             {
-                                System.Diagnostics.Debug.WriteLine($"JSON Deserialization Error: {ex.Message}");
+                                _logger.LogError("JSON Deserialization Error", ex, responseString);
+
                                 return new T
                                 {
                                     Status = "error",
-                                    Message = $"Error parsing API response: {ex.Message}",
+                                    Message = "We couldn't process the response from our medical records system. Our technical team has been notified.",
                                     RawResponse = responseString
                                 };
                             }
@@ -111,35 +136,42 @@ namespace ClaimKitv1.Services
                         {
                             using (var reader = new StreamReader(errorResponse.GetResponseStream()))
                             {
-                                string errorText = reader.ReadToEnd();
-                                System.Diagnostics.Debug.WriteLine($"API Error: {errorText}");
+                                responseString = reader.ReadToEnd();
+                                _logger.LogError($"API Error ({(int)errorResponse.StatusCode})", ex, responseString);
 
                                 return new T
                                 {
                                     Status = "error",
-                                    Message = $"API Error: {(int)errorResponse.StatusCode} ({errorResponse.StatusDescription}) - {errorText}",
-                                    RawResponse = errorText
+                                    Message = "The system is currently unavailable. Please try again in a few minutes.",
+                                    RawResponse = responseString
                                 };
                             }
                         }
                     }
 
+                    _logger.LogError("API Connection Error", ex);
                     return new T
                     {
                         Status = "error",
-                        Message = $"API Error: {ex.Message}"
+                        Message = "We couldn't connect to our medical records system. Please check your internet connection and try again."
                     };
                 }
             }
             catch (Exception ex)
             {
                 // Handle exceptions
-                System.Diagnostics.Debug.WriteLine($"API Call Exception: {ex.Message}");
+                _logger.LogError("API Call Exception", ex, jsonPayload);
+
                 return new T
                 {
                     Status = "error",
-                    Message = $"API Call Error: {ex.Message}"
+                    Message = "An unexpected error occurred. Please try again or contact support if the problem persists."
                 };
+            }
+            finally
+            {
+                // Always log the API call
+                _logger.LogApiCall(_apiUrl, jsonPayload, responseString, isSuccess);
             }
         }
     }

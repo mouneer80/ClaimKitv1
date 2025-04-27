@@ -106,6 +106,7 @@
     <Compile Include="Services\ClaimKitApiService.cs" />
     <Compile Include="Services\ConfigurationService.cs" />
     <Compile Include="Services\IClaimKitApiService.cs" />
+    <Compile Include="Services\LoggingService.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
