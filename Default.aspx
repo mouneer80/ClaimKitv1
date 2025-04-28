@@ -8,11 +8,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="Content/css/styles.css" />
     <link rel="stylesheet" href="Content/css/modal-styles.css" />
+    <!-- Make sure these script references are included -->
+    <script src="https://ajax.aspnetcdn.com/ajax/4.0/1/MicrosoftAjax.js" type="text/javascript"></script>
+    <script src="https://ajax.aspnetcdn.com/ajax/jquery/jquery-3.6.0.min.js" type="text/javascript"></script>
 </head>
+
 <body>
     <form id="form1" runat="server">
         <!-- Add these references to your page head -->
-        <asp:ScriptManager ID="ScriptManager1" runat="server" />
+        <asp:ScriptManager ID="ScriptManager1" runat="server" EnablePageMethods="true" ScriptMode="Release">
+            <Scripts>
+                <asp:ScriptReference Path="https://ajax.aspnetcdn.com/ajax/4.0/1/MicrosoftAjax.js" />
+            </Scripts>
+        </asp:ScriptManager>
 
         <div class="header">
             <div class="container">
@@ -77,9 +85,7 @@
 
                 <div class="form-group">
                     <label for="txtPatientHistory">Patient History:</label>
-                    <div class="input-tooltip" data-tooltip="Enter previous patient history. Each entry should include date, clinician, diagnosis, and treatment.">
-                        <span class="tooltip-icon">ⓘ</span>
-                    </div>
+                    
                     <asp:TextBox ID="txtPatientHistory" runat="server" CssClass="form-control" TextMode="MultiLine" Rows="6" placeholder='[{"date": "MM/DD/YYYY", "doctor": "Dr. Name", "diagnosis": "Diagnosis", "treatment": "Treatment"}]'></asp:TextBox>
                 </div>
 
@@ -219,5 +225,28 @@
         <script src="Content/js/claimkit.js"></script>
         <script src="Content/js/ClaimKitv1-Modal.js"></script>
     </form>
+
+    <script type="text/javascript">
+        // Failsafe to hide loading indicator if scripts fail
+        window.onload = function() {
+            var loadingIndicator = document.getElementById('loadingIndicator');
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'none';
+            }
+        
+            // Add click event listener to all buttons that should hide the spinner
+            //var buttons = document.querySelectorAll('.btn');
+            //buttons.forEach(function(button) {
+            //    button.addEventListener('click', function() {
+            //        setTimeout(function() {
+            //            var loadingIndicator = document.getElementById('loadingIndicator');
+            //            if (loadingIndicator) {
+            //                loadingIndicator.style.display = 'none';
+            //            }
+            //        }, 2000); // 2 second failsafe
+            //    });
+            //});
+        };
+    </script>
 </body>
 </html>

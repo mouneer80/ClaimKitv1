@@ -464,6 +464,11 @@ namespace ClaimKitv1
                 // Show the review results modal
                 ScriptManager.RegisterStartupScript(this, GetType(), "ShowReviewResults",
                     "window.showReviewResultsModal();", true);
+
+                //// Hide loading indicator at the start of processing the response
+                //ScriptManager.RegisterStartupScript(this, GetType(), "HideLoadingFirst",
+                //    "if(document.getElementById('loadingIndicator')) document.getElementById('loadingIndicator').style.display = 'none';", true);
+
             }
             else
             {

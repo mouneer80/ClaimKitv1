@@ -87,19 +87,16 @@ function initModalSystem() {
     const panelsToConvert = ['pnlReviewResults', 'pnlEnhancedNotes', 'pnlGeneratedClaim'];
 
     panelsToConvert.forEach(panelId => {
-        const panel = document.getElementById(panelId);
-        if (panel) {
-            // Create modal elements
-            createModalFromPanel(panel, panelId);
-        }
+        // Create modal elements whether the panel exists/visible or not
+        createModalFromPanel(panelId);
     });
 
     // Hide original panels from the DOM flow
     hideOriginalPanels();
 }
 
-// Create a modal from an ASP.NET panel
-function createModalFromPanel(panel, panelId) {
+// Create a modal from an ASP.NET panel ID
+function createModalFromPanel(panelId) {
     // Get the title based on panel ID
     const modalTitles = {
         'pnlReviewResults': 'Clinical Note Review',
@@ -185,29 +182,62 @@ function showModal(modalId) {
 
     // Find the modal
     const modal = document.getElementById(`modal-${modalId}`);
-    if (!modal) return;
+    if (!modal) {
+        console.error(`Modal not found: modal-${modalId}`);
+        return;
+    }
 
     // Get the original panel
     const originalPanel = document.getElementById(modalId);
-    if (!originalPanel) return;
+    if (!originalPanel) {
+        console.error(`Panel not found: ${modalId}`);
+        return;
+    }
 
-    // Move the content from panel to modal
-    const modalBody = document.getElementById(`modal-body-${modalId}`);
-    if (modalBody) {
-        // Clone the panel content and append to modal
-        const clonedContent = originalPanel.cloneNode(true);
+    // Make sure the modal body exists
+    let modalBody = document.getElementById(`modal-body-${modalId}`);
+    if (!modalBody) {
+        console.error(`Modal body not found: modal-body-${modalId}`);
+        return;
+    }
 
-        // Remove any hidden attributes from the clone
-        clonedContent.style.display = 'block';
-        if (clonedContent.hasAttribute('visible')) {
-            clonedContent.setAttribute('visible', 'true');
+    try {
+        // Check if the panel has content and is visible
+        const isPanelVisible = originalPanel.style.display !== 'none' &&
+            !originalPanel.hasAttribute('hidden') &&
+            originalPanel.getAttribute('visible') !== 'false';
+
+        // If panel exists but might not be visible, we'll still try to get its content
+        if (!isPanelVisible) {
+            const originalVisibility = originalPanel.style.display;
+            originalPanel.style.display = 'block'; // Temporarily make it visible to access content
+
+            // Clone the panel content
+            const clonedContent = originalPanel.cloneNode(true);
+
+            // Restore original visibility
+            originalPanel.style.display = originalVisibility;
+
+            // Process the cloned content
+            clonedContent.style.display = 'block';
+            if (clonedContent.hasAttribute('visible')) {
+                clonedContent.setAttribute('visible', 'true');
+            }
+
+            // Clear previous content and add new
+            modalBody.innerHTML = '';
+            modalBody.innerHTML = clonedContent.innerHTML;
+        } else {
+            // If the panel is visible, handle normally
+            const clonedContent = originalPanel.cloneNode(true);
+            clonedContent.style.display = 'block';
+            if (clonedContent.hasAttribute('visible')) {
+                clonedContent.setAttribute('visible', 'true');
+            }
+
+            modalBody.innerHTML = '';
+            modalBody.innerHTML = clonedContent.innerHTML;
         }
-
-        // Clear previous content and add new
-        modalBody.innerHTML = '';
-
-        // Extract the panel's inner HTML content instead of using the panel itself
-        modalBody.innerHTML = clonedContent.innerHTML;
 
         // If this is the enhanced notes panel, add selection checkboxes
         if (modalId === 'pnlEnhancedNotes') {
@@ -226,6 +256,21 @@ function showModal(modalId) {
         modalState.activeModal = modal;
 
         // Prevent page scrolling
+        document.body.style.overflow = 'hidden';
+    } catch (e) {
+        console.error('Error showing modal:', e);
+
+        // Create a fallback message in case of error
+        modalBody.innerHTML = `
+            <div class="error-message">
+                <p>There was an issue displaying the content. Please try again or refresh the page.</p>
+                <p>Error details: ${e.message}</p>
+            </div>
+        `;
+
+        // Still show the modal so user sees the error
+        modal.classList.add('show');
+        modalState.activeModal = modal;
         document.body.style.overflow = 'hidden';
     }
 }
@@ -686,6 +731,23 @@ function formatReviewResults(containerId) {
     });
 }
 
+// Function to forcibly hide the loading indicator
+window.forceHideLoadingIndicator = function () {
+    // Direct DOM manipulation to hide the loading indicator
+    var loadingIndicator = document.getElementById('loadingIndicator');
+    if (loadingIndicator) {
+        loadingIndicator.style.display = 'none';
+    }
+
+    // Use a failsafe timer to ensure it stays hidden
+    //setTimeout(function () {
+    //    var loadingIndicator = document.getElementById('loadingIndicator');
+    //    if (loadingIndicator) {
+    //        loadingIndicator.style.display = 'none';
+    //    }
+    //}, 500);
+};
+
 // Call the server to enhance notes
 window.enhanceReviewedNotes = function () {
     // Trigger the server-side enhance button
@@ -706,7 +768,21 @@ window.generateClaimFromEnhanced = function () {
 
 // Expose the functions globally for ASP.NET buttons
 window.showReviewResultsModal = function () {
+    // Hide the loading indicator if it's still showing
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    if (loadingIndicator) {
+        loadingIndicator.style.display = 'none';
+    }
+    //showModal('pnlReviewResults');
+
+    // Force hide the loading indicator
+    //window.forceHideLoadingIndicator();
+
+    // Show the modal
     showModal('pnlReviewResults');
+
+    // Add a backup timer to hide the indicator again after the modal is shown
+    setTimeout(window.forceHideLoadingIndicator, 1000);
 };
 
 window.showEnhancedNotesModal = function () {
