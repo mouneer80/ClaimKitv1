@@ -14,6 +14,7 @@ using Newtonsoft.Json.Linq;
 using System.Text.RegularExpressions;
 using System.Linq;
 using System.Web;
+using System.IO;
 
 namespace ClaimKitv1
 {
@@ -227,13 +228,34 @@ namespace ClaimKitv1
                     }
                 }
 
-                // Prepare final notes with the selected sections
-                PrepareAndShowFinalNotes(selectedSections);
+                // Store selected sections in ViewState for potential back navigation
+                ViewState["SelectedSections"] = selectedNotesJson;
+
+                // Check if we're coming back from final notes (via "Back to Enhanced Notes" button)
+                if (Session["SavedFinalNotes"] != null)
+                {
+                    // Restore the previously edited final notes
+                    string savedNotes = Session["SavedFinalNotes"].ToString();
+
+                    // Clear the session variable after use
+                    Session.Remove("SavedFinalNotes");
+
+                    // Prepare final notes with the saved text
+                    txtFinalNotes.Text = savedNotes;
+
+                    _logger.LogUserAction("Restored Final Notes",
+                        $"Request ID: {_requestId}, Length: {savedNotes.Length} characters");
+                }
+                else
+                {
+                    // Normal flow - prepare final notes with the selected sections
+                    PrepareAndShowFinalNotes(selectedSections);
+                }
 
                 // Show the final notes panel
                 pnlFinalNotes.Visible = true;
 
-                // Hide other panels
+                // Hide enhanced notes panel
                 pnlEnhancedNotes.Visible = false;
 
                 // Log the action
@@ -267,7 +289,11 @@ namespace ClaimKitv1
                 }
 
                 // Show enhanced notes again
-                ShowEnhancedNotesModal();
+                pnlEnhancedNotes.Visible = true;
+                pnlFinalNotes.Visible = false;
+
+                // Set the modal to show after UpdatePanel refresh
+                hdnShowModal.Value = "showEnhancedNotesModal";
 
                 _logger.LogUserAction("Returned to Enhanced Notes", $"Request ID: {_requestId}");
             }
@@ -316,15 +342,37 @@ namespace ClaimKitv1
                     return;
                 }
 
-                // Log the action
-                _logger.LogUserAction("Final Notes Saved", $"Request ID: {_requestId}");
+                // 1. Save the final notes to a text file
+                string savedNotesDir = Path.Combine(Server.MapPath("~/"), "SavedNotes");
 
-                // In a real application, we would save the notes to a database here
-                // For now, just show a confirmation message
-                ShowConfirmation("Your clinical notes have been successfully saved and the claim information has been sent to the insurance company.");
+                // Create directory if it doesn't exist
+                if (!Directory.Exists(savedNotesDir))
+                {
+                    Directory.CreateDirectory(savedNotesDir);
+                }
 
-                // Reset the form for a new entry
-                ResetAllPanels();
+                // Generate filename with timestamp and patient ID
+                string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                string patientId = string.IsNullOrEmpty(txtPatientId.Text) ? "unknown" : txtPatientId.Text;
+                string doctorId = string.IsNullOrEmpty(txtDoctorId.Text) ? "unknown" : txtDoctorId.Text;
+                string filename = $"Notes_{patientId}_{doctorId}_{timestamp}.txt";
+                string filePath = Path.Combine(savedNotesDir, filename);
+
+                // Write the final notes to the file
+                File.WriteAllText(filePath, txtFinalNotes.Text);
+
+                // 2. Update the original clinical notes with the final content
+                txtDoctorNotes.Text = txtFinalNotes.Text;
+
+                // 3. Log the action
+                _logger.LogUserAction("Final Notes Saved",
+                    $"Request ID: {_requestId}, File: {filename}, Patient ID: {patientId}");
+
+                // 4. Show confirmation to user
+                ShowConfirmation($"Your clinical notes have been successfully saved as {filename} and the claim information has been sent to the insurance company.");
+
+                // 5. Reset the workflow panels but keep the doctor notes populated
+                ResetWorkflowPanels();
             }
             catch (Exception ex)
             {
@@ -332,7 +380,24 @@ namespace ClaimKitv1
                 DisplayError("There was an issue saving your final notes. Please try again.");
             }
         }
+        private void ResetWorkflowPanels()
+        {
+            // Hide all result panels except the confirmation
+            pnlReviewResults.Visible = false;
+            pnlEnhancedNotes.Visible = false;
+            pnlGeneratedClaim.Visible = false;
+            pnlFinalNotes.Visible = false;
+            pnlError.Visible = false;
 
+            // Hide action buttons
+            pnlActionButtons.Visible = false;
+
+            // Clear request ID to start fresh workflow if needed
+            _requestId = null;
+            ViewState["RequestId"] = null;
+
+            // Don't clear txtDoctorNotes as we've just updated it with the final notes
+        }
         protected void btnEditFinalNotes_Click(object sender, EventArgs e)
         {
             // Just keep the panel visible for further editing
