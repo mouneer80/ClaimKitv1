@@ -220,7 +220,7 @@
                         <div class="btn-group">
                             <asp:Button ID="btnSaveFinalNotes" runat="server" Text="Save & Submit Documentation" CssClass="btn btn-primary action-button" OnClick="btnSaveFinalNotes_Click" />
                             <%--<asp:Button ID="btnEditFinalNotes" runat="server" Text="Continue Editing" CssClass="btn btn-secondary action-button" OnClick="btnEditFinalNotes_Click" />--%>
-                            <button type="button" id="btnBackToEnhanced" class="btn btn-outline action-button" onclick="goBackToEnhanced(); return false;">Back to Enhanced Notes</button>
+                            <button type="button" id="btnBackToEnhanced" class="btn btn-outline action-button" onclick="goBackToEnhanced()">Back to Enhanced Notes</button>
                         </div>
                     </asp:Panel>
                     <script type="text/javascript">
@@ -242,35 +242,18 @@
                             var txtArea = document.getElementById('<%=txtFinalNotes.ClientID%>');
                             var doctorName = '<%=txtDoctorName.Text%>';
                             var signature = "\n\n--\nDocumented by: " + doctorName + ", " + '<%=txtDoctorSpecialization.Text%>' + "\nDate: " + new Date().toLocaleDateString() + "\n";
-        
+
                             txtArea.value += signature;
                             txtArea.focus();
                             txtArea.scrollTop = txtArea.scrollHeight;
                         }
-    
-                        function goBackToEnhanced() {
-                            // Store current text in session storage for client-side persistence
-                            sessionStorage.setItem('finalNotesText', document.getElementById('<%=txtFinalNotes.ClientID%>').value);
 
+                        function goBackToEnhanced() {
+                            // Store current text in case they want to come back to it
+                            sessionStorage.setItem('finalNotesText', document.getElementById('<%=txtFinalNotes.ClientID%>').value);
+        
                             // Show the enhanced notes modal again
                             window.showEnhancedNotesModal();
-
-                            // Hide the final notes panel
-                            var finalNotesPanel = document.getElementById('<%=pnlFinalNotes.ClientID%>');
-                            if (finalNotesPanel) {
-                                finalNotesPanel.style.display = 'none';
-                            }
-        
-                            // Show loading indicator briefly to give visual feedback
-                            var loadingIndicator = document.getElementById('loadingIndicator');
-                            if (loadingIndicator) {
-                                loadingIndicator.style.display = 'block';
-                                setTimeout(function() {
-                                    loadingIndicator.style.display = 'none';
-                                }, 500);
-                            }
-        
-                            return false; // Prevent form submission
                         }
     
                         // Restore any saved text when page loads
@@ -330,12 +313,12 @@
 
     <script type="text/javascript">
         // Failsafe to hide loading indicator if scripts fail
-        window.onload = function() {
+        window.onload = function () {
             var loadingIndicator = document.getElementById('loadingIndicator');
             if (loadingIndicator) {
                 loadingIndicator.style.display = 'none';
             }
-        
+
             // Add click event listener to all buttons that should hide the spinner
             //var buttons = document.querySelectorAll('.btn');
             //buttons.forEach(function(button) {

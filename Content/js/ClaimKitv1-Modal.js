@@ -1178,49 +1178,9 @@ window.showReviewResultsModal = function () {
 };
 
 window.showEnhancedNotesModal = function () {
-    // Reset selections if needed
-    if (modalState.selectedEnhancedNotes.length === 0) {
-        // Check if we have sections stored in selectedSections from before
-        if (typeof selectedSections !== 'undefined' && selectedSections.length > 0) {
-            // Use previously selected sections
-            console.log('Using previously selected sections:', selectedSections);
-            modalState.selectedEnhancedNotes = [...selectedSections];
-        } else {
-            console.log('No previous sections found, starting fresh');
-        }
-    }
-
-    // Make sure the panel is visible (for server-side processing)
-    var enhancedNotesPanel = document.getElementById('pnlEnhancedNotes');
-    if (enhancedNotesPanel) {
-        enhancedNotesPanel.style.display = 'block';
-    }
-
-    // Show the modal
+    // Reset selections when opening
+    modalState.selectedEnhancedNotes = [];
     showModal('pnlEnhancedNotes');
-
-    // If we have a final notes panel visible, hide it visually
-    var finalNotesPanel = document.getElementById('pnlFinalNotes');
-    if (finalNotesPanel) {
-        finalNotesPanel.style.display = 'none';
-    }
-
-    // Make sure section checkboxes reflect the previous selections when returning
-    setTimeout(function () {
-        var checkboxes = document.querySelectorAll('.section-checkbox');
-        if (checkboxes.length > 0 && selectedSections.length > 0) {
-            checkboxes.forEach(function (checkbox) {
-                var sectionId = checkbox.getAttribute('data-section');
-                if (selectedSections.includes(sectionId)) {
-                    checkbox.checked = true;
-                    var sectionPanel = document.getElementById('section-' + sectionId);
-                    if (sectionPanel) {
-                        sectionPanel.classList.add('selected');
-                    }
-                }
-            });
-        }
-    }, 500);
 };
 
 window.showGeneratedClaimModal = function () {
