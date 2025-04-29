@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Web;
 
-namespace ClaimKit_v1.Models.Responses
+namespace ClaimKitv1.Models.Responses
 {
     public class ReviewCategory
     {
@@ -16,5 +16,8 @@ namespace ClaimKit_v1.Models.Responses
 
         [JsonProperty("reason")]
         public string Reason { get; set; }
+
+        [JsonProperty("feedback")]
+        public string Feedback { get; set; }
     }
 }

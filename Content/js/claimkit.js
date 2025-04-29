@@ -129,6 +129,31 @@ function extractJson(text) {
     return null;
 }
 
+$(document).ready(function () {
+    // Add click handlers to category headers
+    $(document).on('click', '.category-header', function () {
+        $(this).toggleClass('collapsed');
+
+        // Adjust content height for animation
+        var content = $(this).next('.category-content');
+        if ($(this).hasClass('collapsed')) {
+            // Save original height before collapsing
+            content.attr('data-height', content.height());
+            content.css('max-height', '0');
+        } else {
+            // Restore to original height
+            var originalHeight = content.attr('data-height') || '1000px';
+            content.css('max-height', originalHeight + 'px');
+        }
+    });
+
+    // Initialize all categories as expanded
+    $('.category-header').each(function () {
+        var content = $(this).next('.category-content');
+        content.attr('data-height', content.height());
+    });
+});
+
 document.addEventListener('DOMContentLoaded', function () {
     // Modal functionality
     const modals = document.querySelectorAll('.modal');

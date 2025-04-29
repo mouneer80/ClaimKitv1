@@ -7,6 +7,8 @@ const modalState = {
     selectedEnhancedNotes: [],
     selectedDiagnoses: []
 };
+// Store selected sections
+var selectedSections = [];
 
 document.addEventListener('DOMContentLoaded', function () {
     // Initialize the modal system
@@ -79,6 +81,17 @@ document.addEventListener('DOMContentLoaded', function () {
             approveClaimDiagnoses();
         }
     });
+
+    // Predefined function to handle enhanced notes modal
+    if (typeof window.showEnhancedNotesModal !== 'function') {
+        window.showEnhancedNotesModal = function () {
+            // Reset selections
+            selectedSections = [];
+
+            // Show the modal
+            showModal('pnlEnhancedNotes');
+        };
+    }
 });
 
 // Initialize the modal system
@@ -116,10 +129,9 @@ function createModalFromPanel(panelId) {
 
         // Prepare footer buttons based on panel type
         let footerButtons = '<button type="button" class="modal-btn modal-btn-secondary close-modal">Close</button>';
-
+        //<button type="button" class="modal-btn modal-btn-primary" onclick="window.enhanceReviewedNotes()">Enhance These Notes</button>
         if (panelId === 'pnlReviewResults') {
             footerButtons = `
-                <button type="button" class="modal-btn modal-btn-primary" onclick="window.enhanceReviewedNotes()">Enhance These Notes</button>
                 <button type="button" class="modal-btn modal-btn-secondary close-modal">Close</button>
             `;
         } else if (panelId === 'pnlEnhancedNotes') {
@@ -317,76 +329,324 @@ function switchTab(tabId) {
 }
 
 // Add selection checkboxes to enhanced notes
+//function enhanceNotesWithSelectionOptions(modalBody) {
+//    // Find the container with the enhanced notes
+//    const notesContainer = modalBody.querySelector('.result-content');
+//    if (!notesContainer) return;
+
+//    try {
+//        // Parse the notes content
+//        const notesContent = notesContainer.textContent;
+//        let notesObject;
+
+//        try {
+//            notesObject = JSON.parse(notesContent);
+//        } catch (e) {
+//            console.error('Failed to parse enhanced notes:', e);
+//            return;
+//        }
+
+//        // Clear the container
+//        notesContainer.innerHTML = '';
+
+//        // Create a new formatted display with checkboxes
+//        const formattedContainer = document.createElement('div');
+//        formattedContainer.className = 'enhanced-notes-container';
+
+//        // Add an explanation for the doctor
+//        const explanation = document.createElement('div');
+//        explanation.className = 'notes-explanation';
+//        explanation.innerHTML = `
+//            <p>Below are your enhanced clinical notes. Please review and select the ones you'd like to include in your final documentation.</p>
+//            <p>These notes have been optimized for clarity and medical accuracy while maintaining your clinical assessment.</p>
+//        `;
+//        formattedContainer.appendChild(explanation);
+
+//        // If notes is an array, display each note with a checkbox
+//        if (Array.isArray(notesObject)) {
+//            notesObject.forEach((note, index) => {
+//                const noteElement = createSelectableNoteElement(note, index);
+//                formattedContainer.appendChild(noteElement);
+//            });
+//        }
+//        // If notes is an object with sections
+//        else if (typeof notesObject === 'object') {
+//            Object.entries(notesObject).forEach(([section, content], index) => {
+//                const sectionElement = document.createElement('div');
+//                sectionElement.className = 'enhanced-note-section';
+
+//                const sectionTitle = document.createElement('h4');
+//                sectionTitle.textContent = formatSectionTitle(section);
+//                sectionElement.appendChild(sectionTitle);
+
+//                const noteElement = createSelectableNoteElement(content, index, section);
+//                sectionElement.appendChild(noteElement);
+
+//                formattedContainer.appendChild(sectionElement);
+//            });
+//        }
+//        // If it's something else, display as is with a checkbox
+//        else {
+//            const noteElement = createSelectableNoteElement(notesObject, 0);
+//            formattedContainer.appendChild(noteElement);
+//        }
+
+//        notesContainer.appendChild(formattedContainer);
+//    } catch (e) {
+//        console.error('Error enhancing notes with selection options:', e);
+//        // Restore original content if there's an error
+//        notesContainer.innerHTML = `<pre>${notesContent}</pre>`;
+//    }
+//}
+
+// Show the enhanced notes with selections
 function enhanceNotesWithSelectionOptions(modalBody) {
-    // Find the container with the enhanced notes
-    const notesContainer = modalBody.querySelector('.result-content');
-    if (!notesContainer) return;
-
     try {
-        // Parse the notes content
-        const notesContent = notesContainer.textContent;
-        let notesObject;
+        // Clear selected sections
+        selectedSections = [];
 
-        try {
-            notesObject = JSON.parse(notesContent);
-        } catch (e) {
-            console.error('Failed to parse enhanced notes:', e);
+        // Find the container with the data attribute
+        const dataContainer = modalBody.querySelector('#enhancedNotesDataContainer');
+        if (!dataContainer) {
+            console.error('Enhanced notes data container not found');
             return;
         }
 
-        // Clear the container
-        notesContainer.innerHTML = '';
+        // Get JSON from the data attribute
+        const jsonData = dataContainer.getAttribute('data-json');
+        if (!jsonData) {
+            console.error('No JSON data found in container');
+            return;
+        }
 
-        // Create a new formatted display with checkboxes
-        const formattedContainer = document.createElement('div');
-        formattedContainer.className = 'enhanced-notes-container';
+        // Parse the JSON
+        const enhancedNotes = JSON.parse(jsonData);
+        console.log('Enhanced notes parsed successfully');
 
-        // Add an explanation for the doctor
-        const explanation = document.createElement('div');
-        explanation.className = 'notes-explanation';
-        explanation.innerHTML = `
-            <p>Below are your enhanced clinical notes. Please review and select the ones you'd like to include in your final documentation.</p>
-            <p>These notes have been optimized for clarity and medical accuracy while maintaining your clinical assessment.</p>
+        // Get the display container
+        const displayContainer = modalBody.querySelector('#enhancedNotesDisplayContainer');
+        if (!displayContainer) {
+            console.error('Display container not found');
+            return;
+        }
+
+        // Build the formatted HTML
+        let html = `
+            <div class="enhanced-notes-container">
+                <div class="notes-explanation">
+                    <p>Below are your enhanced clinical notes. Please select the sections you'd like to include in your final documentation.</p>
+                </div>
+                <div class="sections-container">
         `;
-        formattedContainer.appendChild(explanation);
 
-        // If notes is an array, display each note with a checkbox
-        if (Array.isArray(notesObject)) {
-            notesObject.forEach((note, index) => {
-                const noteElement = createSelectableNoteElement(note, index);
-                formattedContainer.appendChild(noteElement);
+        // Add sections
+        if (enhancedNotes.sections) {
+            Object.keys(enhancedNotes.sections).forEach(sectionKey => {
+                const section = enhancedNotes.sections[sectionKey];
+                const sectionTitle = section.title || formatSectionName(sectionKey);
+
+                html += `
+                    <div class="section-panel" id="section-${sectionKey}">
+                        <div class="section-header">
+                            <div class="section-checkbox-container">
+                                <input type="checkbox" id="section-checkbox-${sectionKey}" 
+                                    class="section-checkbox" data-section="${sectionKey}" checked>
+                                <label for="section-checkbox-${sectionKey}">${sectionTitle}</label>
+                            </div>
+                            <span class="section-toggle">▼</span>
+                        </div>
+                        <div class="section-content">
+                `;
+
+                // Add fields if available
+                if (section.fields) {
+                    html += '<div class="section-fields">';
+                    Object.entries(section.fields).forEach(([fieldName, fieldValue]) => {
+                        html += `
+                            <div class="field-item">
+                                <span class="field-name">${formatFieldName(fieldName)}:</span>
+                                <span class="field-value">${fieldValue}</span>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                }
+
+                // Add subsections if available
+                if (section.subsections) {
+                    html += '<div class="subsections-container">';
+                    Object.entries(section.subsections).forEach(([subsectionKey, subsection]) => {
+                        const subsectionTitle = subsection.title || formatFieldName(subsectionKey);
+
+                        html += `<div class="subsection"><h4>${subsectionTitle}</h4>`;
+
+                        // Add fields
+                        if (subsection.fields) {
+                            html += '<div class="fields-container">';
+                            Object.entries(subsection.fields).forEach(([fieldName, fieldValue]) => {
+                                html += `
+                                    <div class="field-item">
+                                        <span class="field-name">${formatFieldName(fieldName)}:</span>
+                                        <span class="field-value">${fieldValue}</span>
+                                    </div>
+                                `;
+                            });
+                            html += '</div>';
+                        }
+
+                        // Add items list
+                        if (subsection.items && Array.isArray(subsection.items)) {
+                            html += '<ul class="items-list">';
+                            subsection.items.forEach(item => {
+                                if (typeof item === 'string') {
+                                    html += `<li>${item}</li>`;
+                                } else if (typeof item === 'object' && item !== null) {
+                                    let itemText = item.name || '';
+                                    if (item.icd_10_cm_code) {
+                                        itemText += ` <span class="code">(ICD-10: ${item.icd_10_cm_code})</span>`;
+                                    } else if (item.cpt_code) {
+                                        itemText += ` <span class="code">(CPT: ${item.cpt_code})</span>`;
+                                    }
+                                    html += `<li>${itemText}</li>`;
+                                }
+                            });
+                            html += '</ul>';
+                        }
+
+                        html += '</div>'; // Close subsection
+                    });
+                    html += '</div>'; // Close subsections-container
+                }
+
+                html += `
+                        </div>
+                    </div>
+                `;
+
+                // Add to selected sections by default
+                selectedSections.push(sectionKey);
             });
+        } else {
+            html += '<div class="error-message">No sections found in the enhanced notes.</div>';
         }
-        // If notes is an object with sections
-        else if (typeof notesObject === 'object') {
-            Object.entries(notesObject).forEach(([section, content], index) => {
-                const sectionElement = document.createElement('div');
-                sectionElement.className = 'enhanced-note-section';
 
-                const sectionTitle = document.createElement('h4');
-                sectionTitle.textContent = formatSectionTitle(section);
-                sectionElement.appendChild(sectionTitle);
+        html += `
+                </div>
+                <div class="selection-controls">
+                    <div class="selection-header">
+                        <h3>Select Sections to Include</h3>
+                    </div>
+                    <div class="selection-actions">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="selectAllSections()">Select All</button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="deselectAllSections()">Deselect All</button>
+                        <button type="button" class="btn btn-primary" onclick="approveSelectedSections()">Approve Selected Sections</button>
+                    </div>
+                </div>
+            </div>
+        `;
 
-                const noteElement = createSelectableNoteElement(content, index, section);
-                sectionElement.appendChild(noteElement);
+        // Set the HTML
+        displayContainer.innerHTML = html;
 
-                formattedContainer.appendChild(sectionElement);
+        // Add event listeners
+        displayContainer.querySelectorAll('.section-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function () {
+                const sectionId = this.getAttribute('data-section');
+                const sectionPanel = document.getElementById(`section-${sectionId}`);
+
+                if (this.checked) {
+                    if (!selectedSections.includes(sectionId)) {
+                        selectedSections.push(sectionId);
+                    }
+                    if (sectionPanel) sectionPanel.classList.add('selected');
+                } else {
+                    const index = selectedSections.indexOf(sectionId);
+                    if (index !== -1) {
+                        selectedSections.splice(index, 1);
+                    }
+                    if (sectionPanel) sectionPanel.classList.remove('selected');
+                }
+
+                console.log('Selected sections:', selectedSections);
             });
-        }
-        // If it's something else, display as is with a checkbox
-        else {
-            const noteElement = createSelectableNoteElement(notesObject, 0);
-            formattedContainer.appendChild(noteElement);
-        }
+        });
 
-        notesContainer.appendChild(formattedContainer);
+        // Add toggle functionality
+        displayContainer.querySelectorAll('.section-toggle').forEach(toggle => {
+            toggle.addEventListener('click', function () {
+                const sectionPanel = this.closest('.section-panel');
+                const content = sectionPanel.querySelector('.section-content');
+
+                content.classList.toggle('collapsed');
+                this.textContent = content.classList.contains('collapsed') ? '▶' : '▼';
+            });
+        });
+
+        console.log('Enhanced notes displayed with sections:', selectedSections);
     } catch (e) {
-        console.error('Error enhancing notes with selection options:', e);
-        // Restore original content if there's an error
-        notesContainer.innerHTML = `<pre>${notesContent}</pre>`;
+        console.error('Error formatting enhanced notes:', e);
+        modalBody.innerHTML += `<div class="error-message">Error: ${e.message}</div>`;
     }
 }
+// Helper function for formatting section names
+function formatSectionName(sectionKey) {
+    // Replace underscores with spaces
+    let result = sectionKey.replace(/_/g, ' ');
 
+    // Add spaces before capital letters
+    result = result.replace(/([a-z])([A-Z])/g, '$1 $2');
+
+    // Capitalize words
+    return result.replace(/\b\w/g, l => l.toUpperCase());
+}
+
+// Helper function for formatting field names
+function formatFieldName(fieldName) {
+    // Replace underscores with spaces
+    let result = fieldName.replace(/_/g, ' ');
+
+    // Add spaces before capital letters
+    result = result.replace(/([a-z])([A-Z])/g, '$1 $2');
+
+    // Capitalize words
+    return result.replace(/\b\w/g, l => l.toUpperCase());
+}
+
+// Select all sections
+function selectAllSections() {
+    const checkboxes = document.querySelectorAll('.section-checkbox');
+    selectedSections = [];
+
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = true;
+        const sectionId = checkbox.getAttribute('data-section');
+
+        if (!selectedSections.includes(sectionId)) {
+            selectedSections.push(sectionId);
+        }
+
+        const sectionPanel = document.getElementById(`section-${sectionId}`);
+        if (sectionPanel) sectionPanel.classList.add('selected');
+    });
+
+    console.log('Selected all sections:', selectedSections);
+}
+
+// Deselect all sections
+function deselectAllSections() {
+    const checkboxes = document.querySelectorAll('.section-checkbox');
+
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+        const sectionId = checkbox.getAttribute('data-section');
+
+        const sectionPanel = document.getElementById(`section-${sectionId}`);
+        if (sectionPanel) sectionPanel.classList.remove('selected');
+    });
+
+    selectedSections = [];
+    console.log('Deselected all sections');
+}
 // Create a selectable note element with checkbox
 function createSelectableNoteElement(note, index, section = null) {
     const container = document.createElement('div');
@@ -421,7 +681,54 @@ function createSelectableNoteElement(note, index, section = null) {
 
     return container;
 }
+// Approve selected sections
+function approveSelectedSections() {
+    console.log('Approving sections:', selectedSections);
 
+    if (selectedSections.length === 0) {
+        alert('Please select at least one section to approve.');
+        return;
+    }
+
+    // Get the hidden field for selected notes
+    var hdnSelectedNotes = document.getElementById('hdnSelectedNotes');
+    if (!hdnSelectedNotes) {
+        console.error('Hidden field for selected notes not found');
+        alert('Error: Could not store your selections. Please try again.');
+        return;
+    }
+
+    // Store the selections in the hidden field
+    hdnSelectedNotes.value = JSON.stringify(selectedSections);
+    console.log('Stored in hidden field:', hdnSelectedNotes.value);
+
+    // Show loading indicator
+    var loadingIndicator = document.getElementById('loadingIndicator');
+    if (loadingIndicator) {
+        loadingIndicator.style.display = 'block';
+    }
+
+    // Close the modal
+    closeCurrentModal();
+
+    // Trigger the server-side approval button
+    var approveButton = document.getElementById('btnServerApproveNotes');
+    if (approveButton) {
+        // Small delay to ensure UI updates
+        setTimeout(function () {
+            console.log('Clicking approve button');
+            approveButton.click();
+        }, 100);
+    } else {
+        console.error('Approve button not found');
+        alert('Error: Could not submit your selections. Please try again.');
+
+        // Hide loading indicator if we can't proceed
+        if (loadingIndicator) {
+            loadingIndicator.style.display = 'none';
+        }
+    }
+}
 // Add selection checkboxes to generated claim diagnoses
 function enhanceClaimWithSelectionOptions(modalBody) {
     // Find the container with the claim data
@@ -577,25 +884,25 @@ function createSelectableDiagnosisElement(diagnosis, index) {
 }
 
 // Toggle selection of an enhanced note
-function toggleNoteSelection(checkbox) {
-    const index = checkbox.getAttribute('data-index');
-    const section = checkbox.getAttribute('data-section');
+//function toggleNoteSelection(checkbox) {
+//    const index = checkbox.getAttribute('data-index');
+//    const section = checkbox.getAttribute('data-section');
 
-    const noteKey = section ? `${section}-${index}` : index;
+//    const noteKey = section ? `${section}-${index}` : index;
 
-    if (checkbox.checked) {
-        // Add to selected notes if not already included
-        if (!modalState.selectedEnhancedNotes.includes(noteKey)) {
-            modalState.selectedEnhancedNotes.push(noteKey);
-        }
-    } else {
-        // Remove from selected notes
-        const keyIndex = modalState.selectedEnhancedNotes.indexOf(noteKey);
-        if (keyIndex !== -1) {
-            modalState.selectedEnhancedNotes.splice(keyIndex, 1);
-        }
-    }
-}
+//    if (checkbox.checked) {
+//        // Add to selected notes if not already included
+//        if (!modalState.selectedEnhancedNotes.includes(noteKey)) {
+//            modalState.selectedEnhancedNotes.push(noteKey);
+//        }
+//    } else {
+//        // Remove from selected notes
+//        const keyIndex = modalState.selectedEnhancedNotes.indexOf(noteKey);
+//        if (keyIndex !== -1) {
+//            modalState.selectedEnhancedNotes.splice(keyIndex, 1);
+//        }
+//    }
+//}
 
 // Toggle selection of a diagnosis
 function toggleDiagnosisSelection(checkbox) {
@@ -617,24 +924,107 @@ function toggleDiagnosisSelection(checkbox) {
 
 // Handle approval of enhanced notes
 function approveEnhancedNotes() {
-    // Here we would send the selected notes back to the server
-    // For now, just log and close the modal
-    console.log('Approved notes:', modalState.selectedEnhancedNotes);
+    console.log("Currently selected notes:", modalState.selectedEnhancedNotes);
 
-    // Trigger server-side handling via hidden button click
-    const approveButton = document.getElementById('btnServerApproveNotes');
-    if (approveButton) {
-        // Store selected notes in a hidden field
-        const selectedNotesField = document.getElementById('hdnSelectedNotes');
-        if (selectedNotesField) {
-            selectedNotesField.value = JSON.stringify(modalState.selectedEnhancedNotes);
+    if (modalState.selectedEnhancedNotes.length === 0) {
+        // Try to select all checkboxes automatically if nothing is selected
+        var allCheckboxes = document.querySelectorAll('.enhanced-note-checkbox');
+        console.log("Found checkboxes:", allCheckboxes.length);
+
+        if (allCheckboxes.length > 0) {
+            // Auto-select all checkboxes
+            allCheckboxes.forEach(function (checkbox) {
+                checkbox.checked = true;
+                var noteId = checkbox.getAttribute('data-index');
+                var section = checkbox.getAttribute('data-section') || '';
+                var noteKey = section ? section + '-' + noteId : noteId;
+
+                if (!modalState.selectedEnhancedNotes.includes(noteKey)) {
+                    modalState.selectedEnhancedNotes.push(noteKey);
+                }
+            });
+            console.log("Auto-selected notes:", modalState.selectedEnhancedNotes);
+        } else {
+            // If no checkboxes found, use keys from the enhanced notes object
+            try {
+                var enhancedNotesField = document.getElementById('hdnEnhancedNotesData');
+                if (enhancedNotesField && enhancedNotesField.value) {
+                    var enhancedData = JSON.parse(enhancedNotesField.value);
+                    if (enhancedData.sections) {
+                        modalState.selectedEnhancedNotes = Object.keys(enhancedData.sections);
+                        console.log("Auto-selected from data:", modalState.selectedEnhancedNotes);
+                    }
+                }
+            } catch (e) {
+                console.error("Error auto-selecting:", e);
+            }
         }
-
-        // Click the button to trigger server-side event
-        approveButton.click();
     }
 
-    closeCurrentModal();
+    // Check again after auto-selection
+    if (modalState.selectedEnhancedNotes.length === 0) {
+        alert('Please select at least one section to approve.');
+        return;
+    }
+
+    // Get the hidden field
+    var hdnField = document.getElementById('hdnSelectedNotes');
+    console.log("Found hidden field:", hdnField !== null);
+
+    if (hdnField) {
+        // Store selections in hidden field
+        hdnField.value = JSON.stringify(modalState.selectedEnhancedNotes);
+        console.log("Stored in hidden field:", hdnField.value);
+    } else {
+        console.error("Hidden field not found!");
+    }
+
+    // Get the approve button
+    var approveButton = document.getElementById('btnServerApproveNotes');
+    console.log("Found approve button:", approveButton !== null);
+
+    if (approveButton) {
+        // Show loading indicator 
+        var loadingIndicator = document.getElementById('loadingIndicator');
+        if (loadingIndicator) loadingIndicator.style.display = 'block';
+
+        // Close modal first to prevent visual glitches
+        closeCurrentModal();
+
+        // Small delay to allow UI to update
+        setTimeout(function () {
+            // Click the button to trigger server-side event
+            approveButton.click();
+        }, 100);
+    } else {
+        alert('System error: Could not find approve button. Please try again.');
+    }
+}
+
+function toggleNoteSelection(checkbox) {
+    const noteId = checkbox.getAttribute('data-index');
+    const section = checkbox.getAttribute('data-section');
+
+    const noteKey = section ? `${section}-${noteId}` : noteId;
+
+    // Log for debugging
+    console.log('Toggle note:', noteKey, checkbox.checked);
+
+    if (checkbox.checked) {
+        // Add to selected notes if not already included
+        if (!modalState.selectedEnhancedNotes.includes(noteKey)) {
+            modalState.selectedEnhancedNotes.push(noteKey);
+        }
+    } else {
+        // Remove from selected notes
+        const keyIndex = modalState.selectedEnhancedNotes.indexOf(noteKey);
+        if (keyIndex !== -1) {
+            modalState.selectedEnhancedNotes.splice(keyIndex, 1);
+        }
+    }
+
+    // Debug log
+    console.log('Selected notes:', modalState.selectedEnhancedNotes);
 }
 
 // Handle approval of claim diagnoses

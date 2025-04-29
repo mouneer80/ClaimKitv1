@@ -103,6 +103,9 @@
                 <ContentTemplate>
                     <!-- Hidden field to track modal state -->
                     <asp:HiddenField ID="hdnShowModal" runat="server" Value="" />
+                    <asp:HiddenField ID="hdnEnhancedNotesData" runat="server" />
+                    <!-- Hidden field to store selections -->
+                    <asp:HiddenField ID="hdnSelectedNotes" runat="server" />
 
                     <!-- Action Buttons Section (when review is complete) -->
                     <asp:Panel ID="pnlActionButtons" runat="server" CssClass="action-buttons" Visible="false">
@@ -142,11 +145,9 @@
                             <asp:Literal ID="litEnhancedNotes" runat="server"></asp:Literal>
                         </div>
 
-                        <!-- Hidden field to store selections -->
-                        <asp:HiddenField ID="hdnSelectedNotes" runat="server" />
-
                         <!-- Hidden button to process server-side -->
-                        <asp:Button ID="btnServerApproveNotes" runat="server" Text="Approve Notes" CssClass="hidden-button" OnClick="btnServerApproveNotes_Click" Style="display: none;" />
+                        <asp:Button ID="btnServerApproveNotes" runat="server" Text="Approve Notes" CssClass="hidden-button" 
+                            OnClick="btnServerApproveNotes_Click" Style="display: none;" />
                     </asp:Panel>
 
                     <!-- Hidden Generated Claim Section (will be shown as popup) -->
@@ -167,19 +168,70 @@
 
                     <!-- Final Notes Panel -->
                     <asp:Panel ID="pnlFinalNotes" runat="server" CssClass="result-panel" Visible="false">
-                        <h2>Finalize Clinical Documentation</h2>
+                        <div class="panel-header">
+                            <h2>Finalize Clinical Documentation</h2>
+                            <div class="panel-description">
+                                <p>Review and edit your clinical notes below before saving to the patient record.</p>
+                                <p>These notes have been compiled from the sections you selected in the enhanced documentation.</p>
+                            </div>
+                        </div>
 
                         <div class="form-group">
                             <label for="txtFinalNotes">Final Clinical Notes:</label>
-                            <p class="note-instruction">Review and make any final edits to your clinical notes below before saving.</p>
-                            <asp:TextBox ID="txtFinalNotes" runat="server" CssClass="form-control" TextMode="MultiLine" Rows="12"></asp:TextBox>
+                            <div class="note-tools">
+                                <button type="button" class="btn btn-sm btn-outline" onclick="insertTimestamp()">Insert Timestamp</button>
+                                <button type="button" class="btn btn-sm btn-outline" onclick="insertSignature()">Insert Signature</button>
+                            </div>
+                            <asp:TextBox ID="txtFinalNotes" runat="server" CssClass="form-control final-notes-editor" TextMode="MultiLine" Rows="15"></asp:TextBox>
                         </div>
 
                         <div class="btn-group">
                             <asp:Button ID="btnSaveFinalNotes" runat="server" Text="Save & Submit Documentation" CssClass="btn btn-primary action-button" OnClick="btnSaveFinalNotes_Click" />
                             <asp:Button ID="btnEditFinalNotes" runat="server" Text="Continue Editing" CssClass="btn btn-secondary action-button" OnClick="btnEditFinalNotes_Click" />
+                            <button type="button" id="btnBackToEnhanced" class="btn btn-outline action-button" onclick="goBackToEnhanced()">Back to Enhanced Notes</button>
                         </div>
                     </asp:Panel>
+                    <script type="text/javascript">
+                        function insertTimestamp() {
+                            var txtArea = document.getElementById('<%=txtFinalNotes.ClientID%>');
+                            var date = new Date();
+                            var timestamp = date.toLocaleString();
+                            var cursorPos = txtArea.selectionStart;
+                            var textBefore = txtArea.value.substring(0, cursorPos);
+                            var textAfter = txtArea.value.substring(cursorPos, txtArea.value.length);
+
+                            txtArea.value = textBefore + "[" + timestamp + "] " + textAfter;
+                            txtArea.focus();
+                            txtArea.selectionStart = cursorPos + timestamp.length + 3;
+                            txtArea.selectionEnd = cursorPos + timestamp.length + 3;
+                        }
+
+                        function insertSignature() {
+                            var txtArea = document.getElementById('<%=txtFinalNotes.ClientID%>');
+                            var doctorName = '<%=txtDoctorName.Text%>';
+                            var signature = "\n\n--\nDocumented by: " + doctorName + ", " + '<%=txtDoctorSpecialization.Text%>' + "\nDate: " + new Date().toLocaleDateString() + "\n";
+        
+                            txtArea.value += signature;
+                            txtArea.focus();
+                            txtArea.scrollTop = txtArea.scrollHeight;
+                        }
+    
+                        function goBackToEnhanced() {
+                            // Store current text in case they want to come back to it
+                            sessionStorage.setItem('finalNotesText', document.getElementById('<%=txtFinalNotes.ClientID%>').value);
+        
+                            // Show the enhanced notes modal again
+                            window.showEnhancedNotesModal();
+                        }
+    
+                        // Restore any saved text when page loads
+                        window.addEventListener('load', function() {
+                            var savedText = sessionStorage.getItem('finalNotesText');
+                            if (savedText && document.getElementById('<%=txtFinalNotes.ClientID%>')) {
+                                document.getElementById('<%=txtFinalNotes.ClientID%>').value = savedText;
+                            }
+                        });
+                    </script>
 
                     <!-- Error Display -->
                     <asp:Panel ID="pnlError" runat="server" CssClass="error-panel" Visible="false">
@@ -224,6 +276,7 @@
 
         <script src="Content/js/claimkit.js"></script>
         <script src="Content/js/ClaimKitv1-Modal.js"></script>
+        <script src="Content/js/enhanced-notes.js"></script>
     </form>
 
     <script type="text/javascript">

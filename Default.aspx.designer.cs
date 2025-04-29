@@ -141,6 +141,24 @@ namespace ClaimKitv1
         protected global::System.Web.UI.WebControls.HiddenField hdnShowModal;
 
         /// <summary>
+        /// hdnEnhancedNotesData control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.HiddenField hdnEnhancedNotesData;
+
+        /// <summary>
+        /// hdnSelectedNotes control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.HiddenField hdnSelectedNotes;
+
+        /// <summary>
         /// pnlActionButtons control.
         /// </summary>
         /// <remarks>
@@ -229,15 +247,6 @@ namespace ClaimKitv1
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
         protected global::System.Web.UI.WebControls.Literal litEnhancedNotes;
-
-        /// <summary>
-        /// hdnSelectedNotes control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.HiddenField hdnSelectedNotes;
 
         /// <summary>
         /// btnServerApproveNotes control.

@@ -7,10 +7,13 @@ using System.Web.UI;
 using System.Web.UI.WebControls;
 using ClaimKitv1.Models;
 using ClaimKitv1.Services;
-using ClaimKit_v1.Models.Responses;
+using ClaimKitv1.Models.Responses;
+using ClaimKitv1.Helpers;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Text.RegularExpressions;
+using System.Linq;
+using System.Web;
 
 namespace ClaimKitv1
 {
@@ -64,6 +67,12 @@ namespace ClaimKitv1
             {
                 _requestId = ViewState["RequestId"].ToString();
             }
+
+            // Retrieve enhanced notes data from ViewState if available
+            if (ViewState["EnhancedNotesData"] != null && hdnEnhancedNotesData != null)
+            {
+                hdnEnhancedNotesData.Value = ViewState["EnhancedNotesData"].ToString();
+            }
         }
 
         #region Button Click Event Handlers
@@ -116,6 +125,10 @@ namespace ClaimKitv1
                 // Show loading indicator
                 ScriptManager.RegisterStartupScript(this, GetType(), "ShowLoading",
                     "document.getElementById('loadingIndicator').style.display = 'block';", true);
+
+                // Ensure modal init is always triggered
+                ScriptManager.RegisterStartupScript(this, GetType(), "InitEnhancedModal",
+                    "if(typeof window.initEnhancedNotesModal === 'function') { window.initEnhancedNotesModal(); } else { window.setTimeout(function() { if(window.showEnhancedNotesModal) window.showEnhancedNotesModal(); }, 1000); }", true);
             }
             catch (Exception ex)
             {
@@ -154,29 +167,116 @@ namespace ClaimKitv1
             {
                 // Get the selected notes from the hidden field
                 string selectedNotesJson = hdnSelectedNotes.Value;
-                if (string.IsNullOrEmpty(selectedNotesJson))
+
+                // Log for debugging
+                _logger.LogUserAction("Selected Notes JSON", selectedNotesJson);
+
+                // Default selections handling
+                List<string> selectedSections = new List<string>();
+
+                if (string.IsNullOrEmpty(selectedNotesJson) || selectedNotesJson == "[]")
                 {
-                    DisplayError("No enhanced notes were selected. Please select at least one note to approve.");
-                    return;
+                    // If nothing is selected, try to find the sections from the stored data
+                    string enhancedDataJson = hdnEnhancedNotesData.Value;
+
+                    if (!string.IsNullOrEmpty(enhancedDataJson))
+                    {
+                        var enhancedData = JObject.Parse(enhancedDataJson);
+
+                        if (enhancedData["sections"] != null && enhancedData["sections"].Type == JTokenType.Object)
+                        {
+                            // Get all section keys
+                            foreach (var prop in ((JObject)enhancedData["sections"]).Properties())
+                            {
+                                selectedSections.Add(prop.Name);
+                            }
+
+                            _logger.LogUserAction("Auto-selected all sections",
+                                $"Count: {selectedSections.Count}, Section names: {string.Join(", ", selectedSections)}");
+                        }
+                    }
+
+                    // If we still have no selections, show error
+                    if (selectedSections.Count == 0)
+                    {
+                        DisplayError("No sections were selected. Please select at least one section to approve.");
+                        return;
+                    }
+                }
+                else
+                {
+                    // Parse the selected notes from JSON
+                    try
+                    {
+                        selectedSections = JsonConvert.DeserializeObject<List<string>>(selectedNotesJson);
+
+                        if (selectedSections == null || selectedSections.Count == 0)
+                        {
+                            DisplayError("No sections were selected. Please select at least one section to approve.");
+                            return;
+                        }
+
+                        _logger.LogUserAction("Parsed Selected Sections",
+                            $"Count: {selectedSections.Count}, Section names: {string.Join(", ", selectedSections)}");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError("Error parsing selected sections", ex, selectedNotesJson);
+                        DisplayError("There was an error processing your selections. Please try again.");
+                        return;
+                    }
                 }
 
-                // Parse the selected notes
-                var selectedNotes = JsonConvert.DeserializeObject<List<string>>(selectedNotesJson);
+                // Prepare final notes with the selected sections
+                PrepareAndShowFinalNotes(selectedSections);
+
+                // Show the final notes panel
+                pnlFinalNotes.Visible = true;
+
+                // Hide other panels
+                pnlEnhancedNotes.Visible = false;
 
                 // Log the action
                 _logger.LogUserAction("Approved Enhanced Notes",
-                    $"Request ID: {_requestId}, Notes Count: {selectedNotes.Count}");
-
-                // Prepare final notes for editing
-                PrepareAndShowFinalNotes(selectedNotes);
+                    $"Request ID: {_requestId}, Section Count: {selectedSections.Count}");
             }
             catch (Exception ex)
             {
                 _logger.LogError("Error approving notes", ex);
                 DisplayError("There was an issue approving the enhanced notes. Please try again.");
             }
+            finally
+            {
+                // Hide loading indicator
+                ScriptManager.RegisterStartupScript(this, GetType(), "HideLoading",
+                    "document.getElementById('loadingIndicator').style.display = 'none';", true);
+            }
         }
 
+        /// <summary>
+        /// Navigates back from final notes to enhanced notes
+        /// </summary>
+        protected void btnBackToEnhanced_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                // Save current final notes to session state
+                if (!string.IsNullOrEmpty(txtFinalNotes.Text))
+                {
+                    Session["SavedFinalNotes"] = txtFinalNotes.Text;
+                }
+
+                // Show enhanced notes again
+                ShowEnhancedNotesModal();
+
+                _logger.LogUserAction("Returned to Enhanced Notes", $"Request ID: {_requestId}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error returning to enhanced notes", ex);
+                DisplayError("There was an issue returning to the enhanced notes view. Please try again.");
+            }
+        }
         protected void btnServerApproveDiagnoses_Click(object sender, EventArgs e)
         {
             try
@@ -335,6 +435,7 @@ namespace ClaimKitv1
 
                 // Log raw response for debugging
                 _logger.LogUserAction("Enhance Response", response.RawResponse);
+                _logger.LogApiCall(WebConfigurationManager.AppSettings["ClaimKitApiUrl"], JsonConvert.SerializeObject(enhanceRequest), response.RawResponse, true);
 
                 // Process response
                 ProcessEnhanceResponse(response);
@@ -477,6 +578,37 @@ namespace ClaimKitv1
             }
         }
 
+        //private void ProcessEnhanceResponse(EnhanceResponse response)
+        //{
+        //    if (response == null)
+        //    {
+        //        DisplayError("No response received from the system.");
+        //        return;
+        //    }
+
+        //    if (response.IsSuccess)
+        //    {
+        //        if (response.Data != null && response.Data.EnhancedNotes != null)
+        //        {
+        //            // Display enhanced notes
+        //            litEnhancedNotes.Text = JsonConvert.SerializeObject(response.Data.EnhancedNotes, Formatting.Indented);
+        //            pnlEnhancedNotes.Visible = true;
+
+        //            // Set the modal to show after UpdatePanel refresh
+        //            hdnShowModal.Value = "showEnhancedNotesModal";
+        //        }
+        //        else
+        //        {
+        //            DisplayError("No enhanced clinical notes were found in the response.");
+        //        }
+        //    }
+        //    else
+        //    {
+        //        // Display error message
+        //        DisplayError($"The clinical notes enhancement could not be completed: {FormatErrorMessage(response.Message)}");
+        //    }
+        //}
+
         private void ProcessEnhanceResponse(EnhanceResponse response)
         {
             if (response == null)
@@ -489,12 +621,64 @@ namespace ClaimKitv1
             {
                 if (response.Data != null && response.Data.EnhancedNotes != null)
                 {
-                    // Display enhanced notes
-                    litEnhancedNotes.Text = JsonConvert.SerializeObject(response.Data.EnhancedNotes, Formatting.Indented);
-                    pnlEnhancedNotes.Visible = true;
 
-                    // Set the modal to show after UpdatePanel refresh
-                    hdnShowModal.Value = "showEnhancedNotesModal";
+                    try
+                    {
+                        // Parse the enhanced notes data
+                        JObject enhancedNotesObj;
+
+                        // Handle different possible formats
+                        if (response.Data.EnhancedNotes is JObject)
+                        {
+                            enhancedNotesObj = (JObject)response.Data.EnhancedNotes;
+                        }
+                        else if (response.Data.EnhancedNotes is string)
+                        {
+                            // If it's a JSON string, parse it
+                            enhancedNotesObj = JObject.Parse((string)response.Data.EnhancedNotes);
+                        }
+                        else
+                        {
+                            // Serialize and then deserialize to JObject
+                            string jsonStr = JsonConvert.SerializeObject(response.Data.EnhancedNotes);
+                            enhancedNotesObj = JObject.Parse(jsonStr);
+                        }
+
+                        // Store the enhanced notes data for later use
+                        StoreEnhancedNotesData(enhancedNotesObj);
+
+                        // Format the enhanced notes using our formatter
+                        //string formattedHtml = EnhancedNotesFormatter.FormatEnhancedNotes(enhancedNotesObj);
+
+                        // Set the formatted HTML to the literal control
+                        //litEnhancedNotes.Text = formattedHtml;
+                        string serializedData = enhancedNotesObj.ToString(Formatting.None);
+                        // Format for display - we'll use a hidden element to pass the raw JSON to JavaScript
+                        litEnhancedNotes.Text = $"<div id='enhancedNotesDataContainer' style='display:none;' " +
+                            $"data-json='{HttpUtility.HtmlAttributeEncode(serializedData)}'></div>" +
+                            $"<div id='enhancedNotesDisplayContainer'></div>";
+
+                        pnlEnhancedNotes.Visible = true;
+
+                        // Set the modal to show after UpdatePanel refresh
+                        hdnShowModal.Value = "showEnhancedNotesModal";
+
+                        // Log the successful formatting
+                        _logger.LogUserAction("Enhanced Notes Displayed",
+                            $"Request ID: {_requestId}, Sections: {enhancedNotesObj["sections"]?.Count() ?? 0}");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError("Error formatting enhanced notes", ex, JsonConvert.SerializeObject(response.Data.EnhancedNotes));
+
+                        // Fall back to basic JSON display
+                        litEnhancedNotes.Text = "<div class='error'>Could not format enhanced notes. Displaying raw data:</div>";
+                        litEnhancedNotes.Text += JsonConvert.SerializeObject(response.Data.EnhancedNotes, Formatting.Indented);
+                        pnlEnhancedNotes.Visible = true;
+
+                        // Set the modal to show after UpdatePanel refresh
+                        hdnShowModal.Value = "showEnhancedNotesModal";
+                    }
                 }
                 else
                 {
@@ -536,6 +720,20 @@ namespace ClaimKitv1
             {
                 // Display error message
                 DisplayError($"The insurance claim generation could not be completed: {FormatErrorMessage(response.Message)}");
+            }
+        }
+
+        private void StoreEnhancedNotesData(JObject enhancedNotesObj)
+        {
+            string jsonStr = enhancedNotesObj.ToString(Formatting.None);
+            // Store in ViewState for postbacks
+            ViewState["EnhancedNotesData"] = jsonStr;
+            // Store in session for later use
+            Session["EnhancedNotesData"] = jsonStr;
+            // Also store in hidden field for JavaScript access
+            if (hdnEnhancedNotesData != null)
+            {
+                hdnEnhancedNotesData.Value = jsonStr;
             }
         }
 
@@ -584,7 +782,64 @@ namespace ClaimKitv1
                             content.AppendLine($"  <div class=\"section-reasoning\">{category.Reason}</div>");
                         }
 
-                        content.AppendLine($"</div>");
+                        // Parse and display JSON feedback if available
+                        if (!string.IsNullOrEmpty(category.Feedback))
+                        {
+                            try
+                            {
+                                var feedbackObj = JObject.Parse(category.Feedback);
+                                content.AppendLine($"  <div class=\"feedback-container\">");
+
+                                // Process each step in the feedback
+                                foreach (var step in feedbackObj.Properties())
+                                {
+                                    content.AppendLine($"    <div class=\"feedback-step\">");
+                                    content.AppendLine($"      <h4>{step.Name}</h4>");
+
+                                    // Process categories within each step
+                                    if (step.Value is JObject stepObject)
+                                    {
+                                        foreach (var feedbackCategory in stepObject.Properties())
+                                        {
+                                            content.AppendLine($"      <div class=\"feedback-category\">");
+                                            content.AppendLine($"        <h5>{feedbackCategory.Name}</h5>");
+
+                                            // Process details within each category
+                                            if (feedbackCategory.Value is JObject categoryObject)
+                                            {
+                                                // Display result
+                                                if (categoryObject["result"] != null)
+                                                {
+                                                    string resultClass = DetermineResultClass(categoryObject["result"].ToString());
+                                                    content.AppendLine($"        <div class=\"feedback-result {resultClass}\">");
+                                                    content.AppendLine($"          <strong>Result:</strong> {categoryObject["result"]}</div>");
+                                                }
+
+                                                // Display reasoning
+                                                if (categoryObject["reasoning"] != null)
+                                                {
+                                                    content.AppendLine($"        <div class=\"feedback-reasoning\">");
+                                                    content.AppendLine($"          <strong>Reasoning:</strong> {categoryObject["reasoning"]}</div>");
+                                                }
+                                            }
+
+                                            content.AppendLine($"      </div>"); // Close feedback-category
+                                        }
+                                    }
+
+                                    content.AppendLine($"    </div>"); // Close feedback-step
+                                }
+
+                                content.AppendLine($"  </div>"); // Close feedback-container
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError("Error parsing feedback JSON", ex, category.Feedback);
+                                content.AppendLine($"  <div class=\"section-error\">Could not parse detailed feedback information.</div>");
+                            }
+                        }
+
+                        content.AppendLine($"</div>"); // Close category-content
                     }
                     else
                     {
@@ -618,6 +873,29 @@ namespace ClaimKitv1
             }
         }
 
+        // Helper method to determine CSS class based on result text
+        private string DetermineResultClass(string result)
+        {
+            string lowerResult = result.ToLower();
+
+            if (lowerResult.Contains("consistent") ||
+                lowerResult.Contains("necessary") ||
+                lowerResult.Contains("relevant") ||
+                lowerResult.Contains("complete"))
+            {
+                return "result-positive";
+            }
+            else if (lowerResult.Contains("inconsistent") ||
+                     lowerResult.Contains("unnecessary") ||
+                     lowerResult.Contains("irrelevant") ||
+                     lowerResult.Contains("incomplete"))
+            {
+                return "result-negative";
+            }
+
+            return "result-neutral";
+        }
+
         #endregion
 
         #region Helper Methods
@@ -649,30 +927,434 @@ namespace ClaimKitv1
             ShowConfirmation("All clinical documentation has been completed successfully.");
         }
 
-        private void PrepareAndShowFinalNotes(List<string> selectedNotes)
+        //private void PrepareAndShowFinalNotes(List<string> selectedNotes)
+        //{
+        //    try
+        //    {
+        //        // Combine selected notes into a single document
+        //        StringBuilder finalNotes = new StringBuilder();
+        //        foreach (var note in selectedNotes)
+        //        {
+        //            // Try to parse note identifier
+        //            string[] parts = note.Split('-');
+        //            if (parts.Length >= 2)
+        //            {
+        //                // Handle section-specific notes if applicable
+        //                if (parts.Length > 2)
+        //                {
+        //                    string section = parts[1];
+        //                    finalNotes.AppendLine($"=== {FormatSectionTitle(section)} ===");
+        //                }
+
+        //                // Look up the actual note content - this is simplified here
+        //                // In a real implementation, we would parse the original JSON to extract actual notes
+        //                finalNotes.AppendLine($"Enhanced clinical note approved by Dr. {txtDoctorName.Text}");
+        //                finalNotes.AppendLine();
+        //            }
+        //        }
+
+        //        // Set the final notes text
+        //        txtFinalNotes.Text = finalNotes.ToString();
+
+        //        // Show the panel for final editing
+        //        pnlFinalNotes.Visible = true;
+
+        //        // Log the action
+        //        _logger.LogUserAction("Final Notes Prepared", $"Request ID: {_requestId}, Notes Count: {selectedNotes.Count}");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError("Error preparing final notes", ex);
+        //        DisplayError("There was an issue preparing the final clinical notes. Please try again.");
+        //    }
+        //}
+
+        //private void PrepareAndShowFinalNotes(List<string> selectedSectionIds)
+        //{
+        //    try
+        //    {
+        //        // Get the enhanced notes object from the viewstate or session
+        //        JObject enhancedNotes = null;
+
+        //        // Try to parse the last API response
+        //        if (!string.IsNullOrEmpty(ViewState["EnhancedNotesData"] as string))
+        //        {
+        //            enhancedNotes = JObject.Parse((string)ViewState["EnhancedNotesData"]);
+        //        }
+        //        else if (Session["EnhancedNotesData"] != null)
+        //        {
+        //            enhancedNotes = Session["EnhancedNotesData"] as JObject;
+        //        }
+
+        //        StringBuilder finalNotes = new StringBuilder();
+
+        //        if (enhancedNotes != null && enhancedNotes["sections"] != null)
+        //        {
+        //            // Add title if available
+        //            if (enhancedNotes["title"] != null)
+        //            {
+        //                finalNotes.AppendLine($"# {enhancedNotes["title"]}");
+        //                finalNotes.AppendLine();
+        //            }
+        //            else
+        //            {
+        //                finalNotes.AppendLine("# Patient Medical Record");
+        //                finalNotes.AppendLine();
+        //            }
+
+        //            // Add record date
+        //            finalNotes.AppendLine($"**Date:** {DateTime.Now:yyyy-MM-dd}");
+        //            finalNotes.AppendLine();
+
+        //            // Add clinician information
+        //            finalNotes.AppendLine($"**Clinician:** {txtDoctorName.Text}");
+        //            finalNotes.AppendLine($"**Specialization:** {txtDoctorSpecialization.Text}");
+        //            finalNotes.AppendLine($"**Clinician ID:** {txtDoctorId.Text}");
+        //            finalNotes.AppendLine();
+
+        //            // Process selected sections
+        //            JObject sections = (JObject)enhancedNotes["sections"];
+        //            foreach (string sectionId in selectedSectionIds)
+        //            {
+        //                if (sections[sectionId] != null)
+        //                {
+        //                    // Format and add section content
+        //                    finalNotes.Append(FormatSectionForFinalNotes(sectionId, sections[sectionId]));
+        //                }
+        //            }
+        //        }
+        //        else
+        //        {
+        //            // Fallback if we can't access the enhanced notes data
+        //            finalNotes.AppendLine("# Patient Medical Record");
+        //            finalNotes.AppendLine();
+        //            finalNotes.AppendLine($"**Date:** {DateTime.Now:yyyy-MM-dd}");
+        //            finalNotes.AppendLine();
+        //            finalNotes.AppendLine($"**Clinician:** {txtDoctorName.Text}");
+        //            finalNotes.AppendLine($"**Specialization:** {txtDoctorSpecialization.Text}");
+        //            finalNotes.AppendLine();
+
+        //            // Basic section for each selected note
+        //            foreach (string sectionId in selectedSectionIds)
+        //            {
+        //                finalNotes.AppendLine($"## {FormatSectionTitle(sectionId)}");
+        //                finalNotes.AppendLine();
+        //                finalNotes.AppendLine($"Enhanced section approved by Dr. {txtDoctorName.Text}");
+        //                finalNotes.AppendLine();
+        //            }
+        //        }
+
+        //        // Set the final notes text
+        //        txtFinalNotes.Text = finalNotes.ToString();
+
+        //        // Show the panel for final editing
+        //        pnlFinalNotes.Visible = true;
+
+        //        // Log the action
+        //        _logger.LogUserAction("Final Notes Prepared",
+        //            $"Request ID: {_requestId}, Sections Count: {selectedSectionIds.Count}");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError("Error preparing final notes", ex);
+        //        DisplayError("There was an issue preparing the final clinical notes. Please try again.");
+        //    }
+        //}
+
+        /// <summary>
+        /// Shows the enhanced notes modal
+        /// </summary>
+        private void ShowEnhancedNotesModal()
+        {
+            // Make sure the enhanced notes panel is visible
+            pnlEnhancedNotes.Visible = true;
+
+            // Set the modal to show after UpdatePanel refresh
+            hdnShowModal.Value = "showEnhancedNotesModal";
+
+            // Hide the final notes panel if it's visible
+            pnlFinalNotes.Visible = false;
+        }
+
+        /// <summary>
+        /// Formats the final notes for display and editing
+        /// </summary>
+        //private void PrepareAndShowFinalNotes(List<string> selectedSectionIds)
+        //{
+        //    try
+        //    {
+        //        // Check if we have saved notes from a previous edit
+        //        if (Session["SavedFinalNotes"] != null)
+        //        {
+        //            txtFinalNotes.Text = Session["SavedFinalNotes"].ToString();
+        //            Session.Remove("SavedFinalNotes"); // Clear after using
+
+        //            _logger.LogUserAction("Restored Saved Final Notes", $"Request ID: {_requestId}");
+
+        //            // Show the final notes panel
+        //            pnlFinalNotes.Visible = true;
+        //            return;
+        //        }
+
+        //        // Get the enhanced notes object from the ViewState
+        //        JObject enhancedNotes = null;
+
+        //        // Try to parse the last API response
+        //        if (!string.IsNullOrEmpty(hdnEnhancedNotesData.Value))
+        //        {
+        //            enhancedNotes = JObject.Parse(hdnEnhancedNotesData.Value);
+        //        }
+        //        else if (ViewState["EnhancedNotesData"] != null)
+        //        {
+        //            enhancedNotes = JObject.Parse((string)ViewState["EnhancedNotesData"]);
+        //        }
+        //        else if (Session["EnhancedNotesData"] != null)
+        //        {
+        //            enhancedNotes = Session["EnhancedNotesData"] as JObject;
+        //        }
+
+        //        StringBuilder finalNotes = new StringBuilder();
+
+        //        if (enhancedNotes != null && enhancedNotes["sections"] != null)
+        //        {
+        //            // Add title if available
+        //            if (enhancedNotes["title"] != null)
+        //            {
+        //                finalNotes.AppendLine($"# {enhancedNotes["title"]}");
+        //                finalNotes.AppendLine();
+        //            }
+        //            else
+        //            {
+        //                finalNotes.AppendLine("# Patient Medical Record");
+        //                finalNotes.AppendLine();
+        //            }
+
+        //            // Add record metadata
+        //            finalNotes.AppendLine($"Date of Documentation: {DateTime.Now:yyyy-MM-dd}");
+        //            finalNotes.AppendLine($"Patient ID: {txtPatientId.Text}");
+        //            if (!string.IsNullOrEmpty(txtInsuranceCompany.Text))
+        //            {
+        //                finalNotes.AppendLine($"Insurance: {txtInsuranceCompany.Text} (Policy: {txtPolicyId.Text})");
+        //            }
+        //            finalNotes.AppendLine();
+
+        //            // Add clinician information
+        //            finalNotes.AppendLine($"Clinician: {txtDoctorName.Text}");
+        //            if (!string.IsNullOrEmpty(txtDoctorSpecialization.Text))
+        //            {
+        //                finalNotes.AppendLine($"Specialization: {txtDoctorSpecialization.Text}");
+        //            }
+        //            if (!string.IsNullOrEmpty(txtDoctorId.Text))
+        //            {
+        //                finalNotes.AppendLine($"Clinician ID: {txtDoctorId.Text}");
+        //            }
+        //            finalNotes.AppendLine();
+
+        //            // Process selected sections
+        //            JObject sections = (JObject)enhancedNotes["sections"];
+        //            foreach (string sectionId in selectedSectionIds)
+        //            {
+        //                if (sections[sectionId] != null)
+        //                {
+        //                    // Format and add section content
+        //                    finalNotes.Append(FormatSectionForFinalNotes(sectionId, sections[sectionId]));
+        //                }
+        //            }
+
+        //            // Add footer
+        //            finalNotes.AppendLine();
+        //            finalNotes.AppendLine("---");
+        //            finalNotes.AppendLine($"Generated by ClaimKit Medical Documentation Assistant");
+        //            finalNotes.AppendLine($"Request ID: {_requestId}");
+        //        }
+        //        else
+        //        {
+        //            // Fallback if we can't access the enhanced notes data
+        //            finalNotes.AppendLine("# Patient Medical Record");
+        //            finalNotes.AppendLine();
+        //            finalNotes.AppendLine($"Date: {DateTime.Now:yyyy-MM-dd}");
+        //            finalNotes.AppendLine($"Patient ID: {txtPatientId.Text}");
+        //            finalNotes.AppendLine();
+        //            finalNotes.AppendLine($"Clinician: {txtDoctorName.Text}");
+        //            if (!string.IsNullOrEmpty(txtDoctorSpecialization.Text))
+        //            {
+        //                finalNotes.AppendLine($"Specialization: {txtDoctorSpecialization.Text}");
+        //            }
+        //            finalNotes.AppendLine();
+
+        //            // Basic section for each selected note
+        //            foreach (string sectionId in selectedSectionIds)
+        //            {
+        //                finalNotes.AppendLine($"## {FormatSectionTitle(sectionId)}");
+        //                finalNotes.AppendLine();
+        //                finalNotes.AppendLine($"Enhanced documentation section approved by Dr. {txtDoctorName.Text}");
+        //                finalNotes.AppendLine();
+        //            }
+        //        }
+
+        //        // Set the final notes text
+        //        txtFinalNotes.Text = finalNotes.ToString();
+
+        //        // Show the panel for final editing
+        //        pnlFinalNotes.Visible = true;
+
+        //        // Log the action
+        //        _logger.LogUserAction("Final Notes Prepared",
+        //            $"Request ID: {_requestId}, Sections Count: {selectedSectionIds.Count}");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError("Error preparing final notes", ex);
+        //        DisplayError("There was an issue preparing the final clinical notes. Please try again.");
+        //    }
+        //}
+        private void PrepareAndShowFinalNotes(List<string> selectedSectionIds)
         {
             try
             {
-                // Combine selected notes into a single document
-                StringBuilder finalNotes = new StringBuilder();
-                foreach (var note in selectedNotes)
-                {
-                    // Try to parse note identifier
-                    string[] parts = note.Split('-');
-                    if (parts.Length >= 2)
-                    {
-                        // Handle section-specific notes if applicable
-                        if (parts.Length > 2)
-                        {
-                            string section = parts[1];
-                            finalNotes.AppendLine($"=== {FormatSectionTitle(section)} ===");
-                        }
+                // Get the enhanced notes data
+                JObject enhancedNotes = null;
 
-                        // Look up the actual note content - this is simplified here
-                        // In a real implementation, we would parse the original JSON to extract actual notes
-                        finalNotes.AppendLine($"Enhanced clinical note approved by Dr. {txtDoctorName.Text}");
-                        finalNotes.AppendLine();
+                // Try hidden field first
+                if (!string.IsNullOrEmpty(hdnEnhancedNotesData.Value))
+                {
+                    try
+                    {
+                        enhancedNotes = JObject.Parse(hdnEnhancedNotesData.Value);
+                        _logger.LogUserAction("Retrieved enhanced notes from hidden field",
+                            $"Size: {hdnEnhancedNotesData.Value.Length} bytes");
                     }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError("Error parsing enhanced notes from hidden field", ex);
+                    }
+                }
+
+                // If that failed, try ViewState
+                if (enhancedNotes == null && ViewState["EnhancedNotesData"] != null)
+                {
+                    try
+                    {
+                        string jsonData = ViewState["EnhancedNotesData"] as string;
+                        if (!string.IsNullOrEmpty(jsonData))
+                        {
+                            enhancedNotes = JObject.Parse(jsonData);
+                            _logger.LogUserAction("Retrieved enhanced notes from ViewState",
+                                $"Size: {jsonData.Length} bytes");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError("Error parsing enhanced notes from ViewState", ex);
+                    }
+                }
+
+                // As a last resort, try Session
+                if (enhancedNotes == null && Session["EnhancedNotesData"] != null)
+                {
+                    try
+                    {
+                        string jsonData = Session["EnhancedNotesData"] as string;
+                        if (!string.IsNullOrEmpty(jsonData))
+                        {
+                            enhancedNotes = JObject.Parse(jsonData);
+                            _logger.LogUserAction("Retrieved enhanced notes from Session",
+                                $"Size: {jsonData.Length} bytes");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError("Error parsing enhanced notes from Session", ex);
+                    }
+                }
+
+                // If we couldn't get enhanced notes data, show error
+                if (enhancedNotes == null)
+                {
+                    _logger.LogError("Enhanced notes data not found", null,
+                        $"Looked in hidden field, ViewState, and Session. Selected sections: {string.Join(", ", selectedSectionIds)}");
+
+                    DisplayError("Could not retrieve enhanced notes data. Please try enhancing your notes again.");
+                    return;
+                }
+
+                // Build the final notes
+                StringBuilder finalNotes = new StringBuilder();
+
+                // Add header information
+                finalNotes.AppendLine("# Patient Medical Record");
+                finalNotes.AppendLine();
+                finalNotes.AppendLine($"Date of Documentation: {DateTime.Now:yyyy-MM-dd}");
+
+                if (!string.IsNullOrEmpty(txtPatientId.Text))
+                {
+                    finalNotes.AppendLine($"Patient ID: {txtPatientId.Text}");
+                }
+
+                if (!string.IsNullOrEmpty(txtInsuranceCompany.Text))
+                {
+                    finalNotes.AppendLine($"Insurance: {txtInsuranceCompany.Text}" +
+                        (!string.IsNullOrEmpty(txtPolicyId.Text) ? $" (Policy: {txtPolicyId.Text})" : ""));
+                }
+
+                finalNotes.AppendLine();
+                finalNotes.AppendLine($"Clinician: {txtDoctorName.Text}");
+
+                if (!string.IsNullOrEmpty(txtDoctorSpecialization.Text))
+                {
+                    finalNotes.AppendLine($"Specialization: {txtDoctorSpecialization.Text}");
+                }
+
+                if (!string.IsNullOrEmpty(txtDoctorId.Text))
+                {
+                    finalNotes.AppendLine($"Clinician ID: {txtDoctorId.Text}");
+                }
+
+                finalNotes.AppendLine();
+
+                // Check if enhanced notes has sections
+                bool sectionsProcessed = false;
+
+                if (enhancedNotes["sections"] != null && enhancedNotes["sections"].Type == JTokenType.Object)
+                {
+                    JObject sections = (JObject)enhancedNotes["sections"];
+
+                    // Process each selected section
+                    foreach (string sectionId in selectedSectionIds)
+                    {
+                        if (sections[sectionId] != null)
+                        {
+                            // Log section type for debugging
+                            _logger.LogUserAction("Processing section",
+                                $"Section ID: {sectionId}, Type: {sections[sectionId].Type}");
+                            // Format the section and add to final notes
+                            finalNotes.Append(FormatSectionForFinalNotes(sectionId, sections[sectionId]));
+                            sectionsProcessed = true;
+                        }
+                        else
+                        {
+                            _logger.LogUserAction("Section not found",
+                                $"Section ID: {sectionId} was not found in the enhanced notes");
+                        }
+                    }
+                }
+
+                // If no sections were processed, add a fallback
+                if (!sectionsProcessed)
+                {
+                    finalNotes.AppendLine("## Clinical Notes");
+                    finalNotes.AppendLine();
+                    finalNotes.AppendLine("No valid sections were found in the enhanced notes. Please contact support if this issue persists.");
+                    finalNotes.AppendLine();
+                }
+
+                // Add footer
+                finalNotes.AppendLine("---");
+                finalNotes.AppendLine("Generated by ClaimKit Medical Documentation Assistant");
+
+                if (!string.IsNullOrEmpty(_requestId))
+                {
+                    finalNotes.AppendLine($"Request ID: {_requestId}");
                 }
 
                 // Set the final notes text
@@ -681,8 +1363,9 @@ namespace ClaimKitv1
                 // Show the panel for final editing
                 pnlFinalNotes.Visible = true;
 
-                // Log the action
-                _logger.LogUserAction("Final Notes Prepared", $"Request ID: {_requestId}, Notes Count: {selectedNotes.Count}");
+                // Log success
+                _logger.LogUserAction("Final Notes Prepared",
+                    $"Request ID: {_requestId}, Selected Sections: {string.Join(", ", selectedSectionIds)}");
             }
             catch (Exception ex)
             {
@@ -690,6 +1373,401 @@ namespace ClaimKitv1
                 DisplayError("There was an issue preparing the final clinical notes. Please try again.");
             }
         }
+
+        private string FormatSectionForFinalNotes(string sectionId, JToken sectionData)
+        {
+            var result = new StringBuilder();
+
+            // Get section title
+            string title = FormatSectionTitle(sectionId);
+            if (sectionData["title"] != null)
+            {
+                title = sectionData["title"].ToString();
+            }
+
+            // Add section header
+            result.AppendLine($"## {title}");
+            result.AppendLine();
+
+            if (sectionData.Type == JTokenType.Object)
+            {
+                var sectionObj = (JObject)sectionData;
+
+                // Format fields
+                if (sectionObj["fields"] != null && sectionObj["fields"].Type == JTokenType.Object)
+                {
+                    var fields = (JObject)sectionObj["fields"];
+                    foreach (var field in fields.Properties())
+                    {
+                        string fieldName = EnhancedNotesFormatter.FormatFieldName(field.Name);
+                        result.AppendLine($"**{fieldName}:** {field.Value}");
+                    }
+                    result.AppendLine();
+                }
+
+                // Format subsections
+                if (sectionObj["subsections"] != null && sectionObj["subsections"].Type == JTokenType.Object)
+                {
+                    var subsections = (JObject)sectionObj["subsections"];
+                    foreach (var subsection in subsections.Properties())
+                    {
+                        string subsectionTitle = subsection.Name;
+                        if (subsection.Value["title"] != null)
+                        {
+                            subsectionTitle = subsection.Value["title"].ToString();
+                        }
+
+                        result.AppendLine($"### {subsectionTitle}");
+                        result.AppendLine();
+
+                        // Process fields in subsection
+                        if (subsection.Value["fields"] != null)
+                        {
+                            var fields = (JObject)subsection.Value["fields"];
+                            foreach (var field in fields.Properties())
+                            {
+                                string fieldName = EnhancedNotesFormatter.FormatFieldName(field.Name);
+                                result.AppendLine($"**{fieldName}:** {field.Value}");
+                            }
+                            result.AppendLine();
+                        }
+
+                        // Process items list
+                        if (subsection.Value["items"] != null && subsection.Value["items"].Type == JTokenType.Array)
+                        {
+                            foreach (var item in subsection.Value["items"])
+                            {
+                                if (item.Type == JTokenType.String)
+                                {
+                                    result.AppendLine($"- {item}");
+                                }
+                                else if (item.Type == JTokenType.Object)
+                                {
+                                    // Handle complex items
+                                    var itemObj = (JObject)item;
+                                    if (itemObj["name"] != null)
+                                    {
+                                        string itemText = itemObj["name"].ToString();
+
+                                        // Add codes if available
+                                        if (itemObj["icd_10_cm_code"] != null)
+                                        {
+                                            itemText += $" (ICD-10: {itemObj["icd_10_cm_code"]})";
+                                        }
+                                        else if (itemObj["cpt_code"] != null)
+                                        {
+                                            itemText += $" (CPT: {itemObj["cpt_code"]})";
+                                        }
+
+                                        // Add description if available
+                                        if (itemObj["description"] != null)
+                                        {
+                                            itemText += $" - {itemObj["description"]}";
+                                        }
+
+                                        result.AppendLine($"- {itemText}");
+                                    }
+                                }
+                            }
+                            result.AppendLine();
+                        }
+                    }
+                }
+
+                // Format conditions
+                if (sectionObj["conditions"] != null && sectionObj["conditions"].Type == JTokenType.Array)
+                {
+                    foreach (var condition in sectionObj["conditions"])
+                    {
+                        if (condition.Type == JTokenType.Object)
+                        {
+                            var condObj = (JObject)condition;
+                            string condTitle = condObj["title"]?.ToString() ?? "Condition";
+                            string condDesc = condObj["description"]?.ToString() ?? "";
+
+                            result.AppendLine($"### {condTitle}");
+                            result.AppendLine(condDesc);
+                            result.AppendLine();
+                        }
+                    }
+                }
+
+                // Format procedures
+                if (sectionObj["procedures"] != null && sectionObj["procedures"].Type == JTokenType.Array)
+                {
+                    result.AppendLine("### Procedures");
+                    result.AppendLine();
+                    foreach (var procedure in sectionObj["procedures"])
+                    {
+                        if (procedure.Type == JTokenType.Object)
+                        {
+                            var procObj = (JObject)procedure;
+                            string procName = procObj["name"]?.ToString() ?? "Procedure";
+                            string cptCode = procObj["cpt_code"]?.ToString() ?? "";
+
+                            string procText = procName;
+                            if (!string.IsNullOrEmpty(cptCode))
+                            {
+                                procText += $" (CPT: {cptCode})";
+                            }
+
+                            result.AppendLine($"- {procText}");
+                        }
+                    }
+                    result.AppendLine();
+                }
+            }
+            else if (sectionData.Type == JTokenType.Array)
+            {
+                // Handle array sections like medications
+                if (sectionId.ToLower() == "medications")
+                {
+                    foreach (var med in sectionData)
+                    {
+                        if (med.Type == JTokenType.Object)
+                        {
+                            var medObj = (JObject)med;
+                            string name = medObj["name"]?.ToString() ?? "";
+                            string dosage = medObj["dosage"]?.ToString() ?? "";
+                            string frequency = medObj["frequency"]?.ToString() ?? "";
+                            string duration = medObj["duration"]?.ToString() ?? "";
+                            string description = medObj["description"]?.ToString() ?? "";
+                            string code = medObj["medication_code"]?.ToString() ?? "";
+
+                            result.AppendLine($"### {name} {(string.IsNullOrEmpty(code) ? "" : $"({code})")}");
+                            result.AppendLine();
+                            if (!string.IsNullOrEmpty(dosage))
+                                result.AppendLine($"**Dosage:** {dosage}");
+                            if (!string.IsNullOrEmpty(frequency))
+                                result.AppendLine($"**Frequency:** {frequency}");
+                            if (!string.IsNullOrEmpty(duration))
+                                result.AppendLine($"**Duration:** {duration}");
+                            if (!string.IsNullOrEmpty(description))
+                                result.AppendLine($"**Description:** {description}");
+                            result.AppendLine();
+                        }
+                    }
+                }
+                else
+                {
+                    // Generic array handling
+                    foreach (var item in sectionData)
+                    {
+                        result.AppendLine($"- {item}");
+                    }
+                    result.AppendLine();
+                }
+            }
+
+            return result.ToString();
+        }
+
+        /// <summary>
+        /// Formats a section for the final notes
+        /// </summary>
+        //private string FormatSectionForFinalNotes(string sectionId, JToken sectionData)
+        //{
+        //    var result = new StringBuilder();
+
+        //    // Get section title
+        //    string title = FormatSectionTitle(sectionId);
+        //    if (sectionData["title"] != null)
+        //    {
+        //        title = sectionData["title"].ToString();
+        //    }
+
+        //    // Add section header
+        //    result.AppendLine($"## {title}");
+        //    result.AppendLine();
+
+        //    if (sectionData.Type == JTokenType.Object)
+        //    {
+        //        var sectionObj = (JObject)sectionData;
+
+        //        // Format fields
+        //        if (sectionObj["fields"] != null && sectionObj["fields"].Type == JTokenType.Object)
+        //        {
+        //            var fields = (JObject)sectionObj["fields"];
+        //            foreach (var field in fields.Properties())
+        //            {
+        //                string fieldName = EnhancedNotesFormatter.FormatFieldName(field.Name);
+        //                result.AppendLine($"**{fieldName}:** {field.Value}");
+        //            }
+        //            result.AppendLine();
+        //        }
+
+        //        // Format subsections
+        //        if (sectionObj["subsections"] != null && sectionObj["subsections"].Type == JTokenType.Object)
+        //        {
+        //            var subsections = (JObject)sectionObj["subsections"];
+        //            foreach (var subsection in subsections.Properties())
+        //            {
+        //                string subsectionTitle = subsection.Name;
+        //                if (subsection.Value["title"] != null)
+        //                {
+        //                    subsectionTitle = subsection.Value["title"].ToString();
+        //                }
+
+        //                result.AppendLine($"### {subsectionTitle}");
+        //                result.AppendLine();
+
+        //                // Process fields in subsection
+        //                if (subsection.Value["fields"] != null)
+        //                {
+        //                    var fields = (JObject)subsection.Value["fields"];
+        //                    foreach (var field in fields.Properties())
+        //                    {
+        //                        string fieldName = EnhancedNotesFormatter.FormatFieldName(field.Name);
+        //                        result.AppendLine($"**{fieldName}:** {field.Value}");
+        //                    }
+        //                    result.AppendLine();
+        //                }
+
+        //                // Process items list
+        //                if (subsection.Value["items"] != null && subsection.Value["items"].Type == JTokenType.Array)
+        //                {
+        //                    foreach (var item in subsection.Value["items"])
+        //                    {
+        //                        if (item.Type == JTokenType.String)
+        //                        {
+        //                            result.AppendLine($"- {item}");
+        //                        }
+        //                        else if (item.Type == JTokenType.Object)
+        //                        {
+        //                            // Handle complex items
+        //                            var itemObj = (JObject)item;
+        //                            if (itemObj["name"] != null)
+        //                            {
+        //                                string itemText = itemObj["name"].ToString();
+
+        //                                // Add codes if available
+        //                                if (itemObj["icd_10_cm_code"] != null)
+        //                                {
+        //                                    itemText += $" (ICD-10: {itemObj["icd_10_cm_code"]})";
+        //                                }
+        //                                else if (itemObj["cpt_code"] != null)
+        //                                {
+        //                                    itemText += $" (CPT: {itemObj["cpt_code"]})";
+        //                                }
+
+        //                                // Add description if available
+        //                                if (itemObj["description"] != null)
+        //                                {
+        //                                    itemText += $" - {itemObj["description"]}";
+        //                                }
+
+        //                                result.AppendLine($"- {itemText}");
+        //                            }
+        //                        }
+        //                    }
+        //                    result.AppendLine();
+        //                }
+        //            }
+        //        }
+
+        //        // Format conditions
+        //        if (sectionObj["conditions"] != null && sectionObj["conditions"].Type == JTokenType.Array)
+        //        {
+        //            foreach (var condition in sectionObj["conditions"])
+        //            {
+        //                if (condition.Type == JTokenType.Object)
+        //                {
+        //                    var condObj = (JObject)condition;
+        //                    string condTitle = condObj["title"]?.ToString() ?? "Condition";
+        //                    string condDesc = condObj["description"]?.ToString() ?? "";
+
+        //                    result.AppendLine($"### {condTitle}");
+        //                    result.AppendLine(condDesc);
+        //                    result.AppendLine();
+        //                }
+        //            }
+        //        }
+
+        //        // Format procedures
+        //        if (sectionObj["procedures"] != null && sectionObj["procedures"].Type == JTokenType.Array)
+        //        {
+        //            result.AppendLine("### Procedures");
+        //            result.AppendLine();
+        //            foreach (var procedure in sectionObj["procedures"])
+        //            {
+        //                if (procedure.Type == JTokenType.Object)
+        //                {
+        //                    var procObj = (JObject)procedure;
+        //                    string procName = procObj["name"]?.ToString() ?? "Procedure";
+        //                    string cptCode = procObj["cpt_code"]?.ToString() ?? "";
+
+        //                    string procText = procName;
+        //                    if (!string.IsNullOrEmpty(cptCode))
+        //                    {
+        //                        procText += $" (CPT: {cptCode})";
+        //                    }
+
+        //                    result.AppendLine($"- {procText}");
+        //                }
+        //            }
+        //            result.AppendLine();
+        //        }
+        //    }
+        //    else if (sectionData.Type == JTokenType.Array)
+        //    {
+        //        // Handle array sections like medications
+        //        if (sectionId.ToLower() == "medications")
+        //        {
+        //            foreach (var med in sectionData)
+        //            {
+        //                if (med.Type == JTokenType.Object)
+        //                {
+        //                    var medObj = (JObject)med;
+        //                    string name = medObj["name"]?.ToString() ?? "";
+        //                    string dosage = medObj["dosage"]?.ToString() ?? "";
+        //                    string frequency = medObj["frequency"]?.ToString() ?? "";
+        //                    string duration = medObj["duration"]?.ToString() ?? "";
+        //                    string description = medObj["description"]?.ToString() ?? "";
+        //                    string code = medObj["medication_code"]?.ToString() ?? "";
+
+        //                    result.AppendLine($"### {name} {(string.IsNullOrEmpty(code) ? "" : $"({code})")}");
+        //                    result.AppendLine();
+        //                    if (!string.IsNullOrEmpty(dosage))
+        //                        result.AppendLine($"**Dosage:** {dosage}");
+        //                    if (!string.IsNullOrEmpty(frequency))
+        //                        result.AppendLine($"**Frequency:** {frequency}");
+        //                    if (!string.IsNullOrEmpty(duration))
+        //                        result.AppendLine($"**Duration:** {duration}");
+        //                    if (!string.IsNullOrEmpty(description))
+        //                        result.AppendLine($"**Description:** {description}");
+        //                    result.AppendLine();
+        //                }
+        //            }
+        //        }
+        //        else
+        //        {
+        //            // Generic array handling
+        //            foreach (var item in sectionData)
+        //            {
+        //                result.AppendLine($"- {item}");
+        //            }
+        //            result.AppendLine();
+        //        }
+        //    }
+
+        //    return result.ToString();
+        //}
+
+        //// Helper methods for formatting
+        //private string FormatFieldName(string fieldName)
+        //{
+        //    if (string.IsNullOrEmpty(fieldName))
+        //        return string.Empty;
+
+        //    // Replace underscores with spaces
+        //    string result = fieldName.Replace('_', ' ');
+
+        //    // Handle camelCase by adding spaces before capital letters
+        //    result = Regex.Replace(result, "([a-z])([A-Z])", "$1 $2");
+
+        //    // Title case the field name
+        //    return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(result);
+        //}
 
         private void ShowConfirmation(string message)
         {
