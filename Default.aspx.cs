@@ -92,10 +92,10 @@ namespace ClaimKitv1
             try
             {
                 // Log the action
-                _logger.LogUserAction("Review Notes Initiated", $"Doctor: {txtDoctorName.Text}, Patient ID: {txtPatientId.Text}");
+                _logger.LogUserAction("Review / Enhance Notes Initiated", $"Doctor: {txtDoctorName.Text}, Patient ID: {txtPatientId.Text}");
 
                 // Register async task
-                RegisterAsyncTask(new PageAsyncTask(PerformReviewAsync));
+                RegisterAsyncTask(new PageAsyncTask(PerformReviewAndEnhanceAsync));
 
                 // Show loading indicator (UI feedback)
                 ScriptManager.RegisterStartupScript(this, GetType(), "ShowLoading",
@@ -103,8 +103,8 @@ namespace ClaimKitv1
             }
             catch (Exception ex)
             {
-                _logger.LogError("Error initiating review", ex);
-                DisplayError("There was an issue starting the review process. Please try again.");
+                _logger.LogError("Error initiating review / enhance", ex);
+                DisplayError("There was an issue starting the review and enhancement process. Please try again.");
             }
         }
 
@@ -353,6 +353,93 @@ namespace ClaimKitv1
 
         #region Async API Call Methods
 
+        // New combined method to perform review and auto-enhance
+        private async Task PerformReviewAndEnhanceAsync()
+        {
+            try
+            {
+                // Set check-in time to current time
+                long currentTimestamp = GetCurrentUnixTimestamp();
+
+                // Store checkout time for later use (checkout time is check-in time + 1 hour for this example)
+                _checkoutTime = currentTimestamp + 3600; // Add 1 hour
+                ViewState["CheckoutTime"] = _checkoutTime;
+
+                // Parse patient history (validate JSON format)
+                JArray patientHistory = ParsePatientHistory();
+                if (patientHistory == null) return;
+
+                // Create review request
+                var reviewRequest = new ReviewRequest
+                {
+                    HospitalId = ConfigurationService.HospitalId,
+                    ClaimKitApiKey = ConfigurationService.ClaimKitApiKey,
+                    HospitalPatientId = txtPatientId.Text,
+                    DoctorNotes = txtDoctorNotes.Text,
+                    InsuranceCompany = txtInsuranceCompany.Text,
+                    PolicyBand = txtPolicyBand.Text,
+                    PolicyId = txtPolicyId.Text,
+                    PatientCheckinTime = currentTimestamp,
+                    DoctorName = txtDoctorName.Text,
+                    DoctorSpecialization = txtDoctorSpecialization.Text,
+                    HospitalDoctorId = txtDoctorId.Text,
+                    PatientHistory = patientHistory
+                };
+
+                // Log the request details
+                _logger.LogUserAction("Sending Review Request",
+                    $"Patient ID: {reviewRequest.HospitalPatientId}, Insurance: {reviewRequest.InsuranceCompany}");
+
+                // Call API service
+                var response = await _apiService.ReviewNotesAsync(reviewRequest);
+
+                // Process review response
+                ProcessReviewResponse(response);
+
+                // If review was successful, automatically enhance notes
+                if (response.IsSuccess && !string.IsNullOrEmpty(response.RequestId))
+                {
+                    _requestId = response.RequestId;
+                    ViewState["RequestId"] = _requestId;
+
+                    // Log the enhancement action
+                    _logger.LogUserAction("Auto-Enhancement Starting", $"Request ID: {_requestId}");
+
+                    // Create enhance request with proper parameters
+                    var enhanceRequest = new EnhanceRequest
+                    {
+                        HospitalId = ConfigurationService.HospitalId,
+                        ClaimKitApiKey = ConfigurationService.ClaimKitApiKey,
+                        RequestId = _requestId
+                    };
+
+                    // Call API service for enhancement
+                    var enhanceResponse = await _apiService.EnhanceNotesAsync(enhanceRequest);
+
+                    // Process enhance response
+                    ProcessEnhanceResponse(enhanceResponse);
+
+                    // Log the combined operation completion
+                    _logger.LogUserAction("Review and Enhance Completed",
+                        $"Request ID: {_requestId}, Review Status: {response.Status}, Enhance Status: {enhanceResponse.Status}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error during review and enhance process", ex);
+                DisplayError("There was an issue reviewing and enhancing your clinical notes. Our technical team has been notified.");
+            }
+            finally
+            {
+                // Hide loading indicator
+                ScriptManager.RegisterStartupScript(this, GetType(), "HideLoading",
+                    "document.getElementById('loadingIndicator').style.display = 'none';", true);
+            }
+        }
+
+        // Keep the original PerformReviewAsync and PerformEnhanceAsync methods for backward compatibility
+        // but they won't be called directly from the UI anymore
+
         private async Task PerformReviewAsync()
         {
             try
@@ -394,6 +481,15 @@ namespace ClaimKitv1
 
                 // Process response
                 ProcessReviewResponse(response);
+
+                if (response.IsSuccess)
+                {
+                    _requestId = response.RequestId;
+                    ViewState["RequestId"] = _requestId;
+
+                    // Automatically perform enhance after successful review
+                    await PerformEnhanceAsync();
+                }
             }
             catch (Exception ex)
             {
@@ -563,8 +659,7 @@ namespace ClaimKitv1
                 pnlActionButtons.Visible = true;
 
                 // Show the review results modal
-                ScriptManager.RegisterStartupScript(this, GetType(), "ShowReviewResults",
-                    "window.showReviewResultsModal();", true);
+                //ScriptManager.RegisterStartupScript(this, GetType(), "ShowReviewResults", "window.showReviewResultsModal();", true);
 
                 //// Hide loading indicator at the start of processing the response
                 //ScriptManager.RegisterStartupScript(this, GetType(), "HideLoadingFirst",

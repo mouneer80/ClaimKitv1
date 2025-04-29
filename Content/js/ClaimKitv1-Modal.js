@@ -130,14 +130,15 @@ function createModalFromPanel(panelId) {
         // Prepare footer buttons based on panel type
         let footerButtons = '<button type="button" class="modal-btn modal-btn-secondary close-modal">Close</button>';
         //<button type="button" class="modal-btn modal-btn-primary" onclick="window.enhanceReviewedNotes()">Enhance These Notes</button>
+        //<button type="button" class="modal-btn modal-btn-primary" onclick="window.generateClaimFromEnhanced()">Generate Insurance Claim</button>
+        //<button type="button" id="btnApproveEnhancedNotes" class="modal-btn modal-btn-primary">Approve Selected Notes</button>
         if (panelId === 'pnlReviewResults') {
             footerButtons = `
+                <button type="button" class="modal-btn modal-btn-primary" onclick="window.showEnhancedNotesModal()">Continue to Enhanced Notes</button>
                 <button type="button" class="modal-btn modal-btn-secondary close-modal">Close</button>
             `;
         } else if (panelId === 'pnlEnhancedNotes') {
-            footerButtons = `
-                <button type="button" id="btnApproveEnhancedNotes" class="modal-btn modal-btn-primary">Approve Selected Notes</button>
-                <button type="button" class="modal-btn modal-btn-primary" onclick="window.generateClaimFromEnhanced()">Generate Insurance Claim</button>
+            footerButtons = `                
                 <button type="button" class="modal-btn modal-btn-secondary close-modal">Close</button>
             `;
         } else if (panelId === 'pnlGeneratedClaim') {
@@ -434,7 +435,8 @@ function enhanceNotesWithSelectionOptions(modalBody) {
         let html = `
             <div class="enhanced-notes-container">
                 <div class="notes-explanation">
-                    <p>Below are your enhanced clinical notes. Please select the sections you'd like to include in your final documentation.</p>
+                    <p>Your clinical notes have been reviewed and automatically enhanced for clarity and completeness.</p>
+                    <p>Please select the sections you'd like to include in your final documentation.</p>
                 </div>
                 <div class="sections-container">
         `;

@@ -28,6 +28,36 @@
             </div>
         </div>
         <div class="container">
+            <!-- Workflow Progress Indicator -->
+            <asp:Panel ID="pnlWorkflowProgress" runat="server" CssClass="workflow-progress-container" Visible="false">
+                <div class="workflow-steps">
+                    <div class="step step-completed">
+                        <div class="step-number">1</div>
+                        <div class="step-label">Enter Notes</div>
+                    </div>
+                    <div class="step-connector"></div>
+                    <div class="step" id="stepReviewEnhance">
+                        <div class="step-number">2</div>
+                        <div class="step-label">Review & Enhance</div>
+                    </div>
+                    <div class="step-connector"></div>
+                    <div class="step" id="stepSelectNotes">
+                        <div class="step-number">3</div>
+                        <div class="step-label">Select Sections</div>
+                    </div>
+                    <div class="step-connector"></div>
+                    <div class="step" id="stepFinalize">
+                        <div class="step-number">4</div>
+                        <div class="step-label">Finalize Notes</div>
+                    </div>
+                    <div class="step-connector"></div>
+                    <div class="step" id="stepClaim">
+                        <div class="step-number">5</div>
+                        <div class="step-label">Generate Claim</div>
+                    </div>
+                </div>
+            </asp:Panel>
+
             <!-- Loading Indicator -->
             <div id="loadingIndicator" style="display: none;" class="loading-indicator">
                 <div class="spinner"></div>
@@ -95,7 +125,9 @@
                 </div>
 
                 <div class="btn-group">
-                    <asp:Button ID="btnReviewNotes" runat="server" Text="Review Clinical Notes" CssClass="btn btn-primary action-button" OnClick="btnReviewNotes_Click" />
+                    <asp:Button ID="btnReviewNotes" runat="server" Text="Review & Enhance Notes" 
+                                CssClass="btn btn-primary action-button" OnClick="btnReviewNotes_Click" 
+                                ToolTip="Review clinical notes and automatically enhance them" />
                 </div>
             </div>
 
@@ -111,7 +143,7 @@
                     <asp:Panel ID="pnlActionButtons" runat="server" CssClass="action-buttons" Visible="false">
                         <div class="btn-group">
                             <asp:Button ID="btnViewResults" runat="server" Text="View Review Results" CssClass="btn btn-primary action-button" OnClientClick="showReviewResultsModal(); return false;" />
-                            <asp:Button ID="btnEnhanceNotes" runat="server" Text="Enhance Clinical Notes" CssClass="btn btn-primary action-button" OnClick="btnEnhanceNotes_Click" />
+                            <%--<asp:Button ID="btnEnhanceNotes" runat="server" Text="Enhance Clinical Notes" CssClass="btn btn-primary action-button" OnClick="btnEnhanceNotes_Click" />--%>
                             <asp:Button ID="btnGenerateClaim" runat="server" Text="Generate Insurance Claim" CssClass="btn btn-primary action-button" OnClick="btnGenerateClaim_Click" />
                         </div>
                     </asp:Panel>
@@ -187,7 +219,7 @@
 
                         <div class="btn-group">
                             <asp:Button ID="btnSaveFinalNotes" runat="server" Text="Save & Submit Documentation" CssClass="btn btn-primary action-button" OnClick="btnSaveFinalNotes_Click" />
-                            <asp:Button ID="btnEditFinalNotes" runat="server" Text="Continue Editing" CssClass="btn btn-secondary action-button" OnClick="btnEditFinalNotes_Click" />
+                            <%--<asp:Button ID="btnEditFinalNotes" runat="server" Text="Continue Editing" CssClass="btn btn-secondary action-button" OnClick="btnEditFinalNotes_Click" />--%>
                             <button type="button" id="btnBackToEnhanced" class="btn btn-outline action-button" onclick="goBackToEnhanced()">Back to Enhanced Notes</button>
                         </div>
                     </asp:Panel>

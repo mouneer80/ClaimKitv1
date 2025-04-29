@@ -129,6 +129,52 @@ function extractJson(text) {
     return null;
 }
 
+function updateWorkflowProgress(currentStep) {
+    // Reset all steps
+    document.querySelectorAll('.workflow-steps .step').forEach(function (step) {
+        step.classList.remove('step-active');
+        step.classList.remove('step-completed');
+    });
+    document.querySelectorAll('.step-connector').forEach(function (connector) {
+        connector.classList.remove('step-completed-connector');
+    });
+
+    // Step 1 is always completed when the progress is shown
+    document.querySelector('.workflow-steps .step:nth-child(1)').classList.add('step-completed');
+
+    switch (currentStep) {
+        case 'review':
+            document.getElementById('stepReviewEnhance').classList.add('step-active');
+            break;
+        case 'enhance':
+            document.getElementById('stepReviewEnhance').classList.add('step-completed');
+            document.querySelector('.workflow-steps .step-connector:nth-child(2)').classList.add('step-completed-connector');
+            document.getElementById('stepSelectNotes').classList.add('step-active');
+            break;
+        case 'select':
+            document.getElementById('stepReviewEnhance').classList.add('step-completed');
+            document.querySelector('.workflow-steps .step-connector:nth-child(2)').classList.add('step-completed-connector');
+            document.getElementById('stepSelectNotes').classList.add('step-active');
+            break;
+        case 'finalize':
+            document.getElementById('stepReviewEnhance').classList.add('step-completed');
+            document.querySelector('.workflow-steps .step-connector:nth-child(2)').classList.add('step-completed-connector');
+            document.getElementById('stepSelectNotes').classList.add('step-completed');
+            document.querySelector('.workflow-steps .step-connector:nth-child(4)').classList.add('step-completed-connector');
+            document.getElementById('stepFinalize').classList.add('step-active');
+            break;
+        case 'claim':
+            document.getElementById('stepReviewEnhance').classList.add('step-completed');
+            document.querySelector('.workflow-steps .step-connector:nth-child(2)').classList.add('step-completed-connector');
+            document.getElementById('stepSelectNotes').classList.add('step-completed');
+            document.querySelector('.workflow-steps .step-connector:nth-child(4)').classList.add('step-completed-connector');
+            document.getElementById('stepFinalize').classList.add('step-completed');
+            document.querySelector('.workflow-steps .step-connector:nth-child(6)').classList.add('step-completed-connector');
+            document.getElementById('stepClaim').classList.add('step-active');
+            break;
+    }
+}
+
 $(document).ready(function () {
     // Add click handlers to category headers
     $(document).on('click', '.category-header', function () {

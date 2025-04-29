@@ -1,4 +1,74 @@
-﻿/* Final Notes Panel Styles */
+﻿.workflow-progress-container {
+    margin-bottom: 25px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.workflow-steps {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+}
+
+.step-number {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background-color: #e9ecef;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.step-label {
+    font-size: 0.8rem;
+    color: #6c757d;
+    text-align: center;
+    max-width: 80px;
+}
+
+.step-connector {
+    height: 2px;
+    background-color: #e9ecef;
+    flex-grow: 1;
+    margin: 0 5px;
+}
+
+.step-active .step-number {
+    background-color: #007bff;
+    color: white;
+}
+
+.step-active .step-label {
+    color: #007bff;
+    font-weight: bold;
+}
+
+.step-completed .step-number {
+    background-color: #28a745;
+    color: white;
+}
+
+.step-completed .step-label {
+    color: #28a745;
+}
+
+.step-completed-connector {
+    background-color: #28a745;
+}
+
 .panel-header {
     margin-bottom: 20px;
 }

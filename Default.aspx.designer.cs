@@ -33,6 +33,15 @@ namespace ClaimKitv1
         protected global::System.Web.UI.ScriptManager ScriptManager1;
 
         /// <summary>
+        /// pnlWorkflowProgress control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Panel pnlWorkflowProgress;
+
+        /// <summary>
         /// txtPatientId control.
         /// </summary>
         /// <remarks>
@@ -177,15 +186,6 @@ namespace ClaimKitv1
         protected global::System.Web.UI.WebControls.Button btnViewResults;
 
         /// <summary>
-        /// btnEnhanceNotes control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.Button btnEnhanceNotes;
-
-        /// <summary>
         /// btnGenerateClaim control.
         /// </summary>
         /// <remarks>
@@ -328,15 +328,6 @@ namespace ClaimKitv1
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
         protected global::System.Web.UI.WebControls.Button btnSaveFinalNotes;
-
-        /// <summary>
-        /// btnEditFinalNotes control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.Button btnEditFinalNotes;
 
         /// <summary>
         /// pnlError control.
