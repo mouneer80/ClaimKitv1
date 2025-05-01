@@ -9,9 +9,6 @@ using Newtonsoft.Json;
 
 namespace ClaimKitv1.Services
 {
-    /// <summary>
-    /// Service for communicating with the ClaimKit API
-    /// </summary>
     public class ClaimKitApiService : IClaimKitApiService
     {
         private readonly string _apiUrl;
@@ -25,11 +22,6 @@ namespace ClaimKitv1.Services
             _logger = LoggingService.Instance;
         }
 
-        /// <summary>
-        /// Sends a review request to analyze doctor's notes
-        /// </summary>
-        /// <param name="request">The review request object</param>
-        /// <returns>The API response</returns>
         public async Task<ReviewResponse> ReviewNotesAsync(ReviewRequest request)
         {
             var jsonPayload = JsonConvert.SerializeObject(request);
@@ -37,11 +29,6 @@ namespace ClaimKitv1.Services
             return await CallApiAsync<ReviewResponse>(jsonPayload);
         }
 
-        /// <summary>
-        /// Sends a request to enhance doctor's notes
-        /// </summary>
-        /// <param name="request">The enhance request object</param>
-        /// <returns>The API response with enhanced notes</returns>
         public async Task<EnhanceResponse> EnhanceNotesAsync(EnhanceRequest request)
         {
             var jsonPayload = JsonConvert.SerializeObject(request);
@@ -49,11 +36,6 @@ namespace ClaimKitv1.Services
             return await CallApiAsync<EnhanceResponse>(jsonPayload);
         }
 
-        /// <summary>
-        /// Sends a request to generate an insurance claim
-        /// </summary>
-        /// <param name="request">The generate claim request object</param>
-        /// <returns>The API response with generated claim data</returns>
         public async Task<GenerateClaimResponse> GenerateClaimAsync(GenerateClaimRequest request)
         {
             var jsonPayload = JsonConvert.SerializeObject(request);
@@ -61,12 +43,6 @@ namespace ClaimKitv1.Services
             return await CallApiAsync<GenerateClaimResponse>(jsonPayload);
         }
 
-        /// <summary>
-        /// Generic method to call the API with the appropriate request and process the response
-        /// </summary>
-        /// <typeparam name="T">Response type to deserialize to</typeparam>
-        /// <param name="jsonPayload">The JSON payload to send</param>
-        /// <returns>The deserialized response object</returns>
         private async Task<T> CallApiAsync<T>(string jsonPayload) where T : BaseResponse, new()
         {
             bool isSuccess = false;

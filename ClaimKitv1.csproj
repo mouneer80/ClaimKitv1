@@ -72,6 +72,7 @@
   <ItemGroup>
     <Content Include="Content\css\styles.css" />
     <Content Include="Content\css\modal-styles.css" />
+    <Content Include="Content\js\claimkit-merged.js" />
     <Content Include="Content\js\claimkit.js" />
     <Content Include="Content\js\ClaimKitv1-Modal.js" />
     <Content Include="Content\js\enhanced-notes.js" />

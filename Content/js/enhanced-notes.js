@@ -46,7 +46,6 @@ $(document).ready(function () {
                     </div>
                 </div>
             `;
-
             // Append modal to body
             $('body').append(modalHtml);
 
