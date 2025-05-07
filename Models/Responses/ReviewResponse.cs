@@ -10,5 +10,8 @@ namespace ClaimKitv1.Models.Responses
     {
         [JsonProperty("review")]
         public List<ReviewCategory> Review { get; set; }
+
+        [JsonIgnore]
+        public TimeSpan ResponseTime { get; set; }
     }
 }

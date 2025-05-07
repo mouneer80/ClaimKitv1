@@ -54,6 +54,7 @@ namespace ClaimKitv1
                 string modalToShow = hdnShowModal.Value;
                 if (!string.IsNullOrEmpty(modalToShow))
                 {
+                    if(modalToShow == "showGeneratedClaimModal")
                     // Schedule the modal to be shown after the UpdatePanel completes
                     ScriptManager.RegisterStartupScript(this, GetType(), "ShowModalAfterPostback",
                         $"setTimeout(function() {{ window.{modalToShow}(); }}, 300);", true);
@@ -62,6 +63,21 @@ namespace ClaimKitv1
                     hdnShowModal.Value = "";
                 }
             }
+            // Always handle modal logic safely
+            //string modalToShow = hdnShowModal.Value;
+            //if (!string.IsNullOrEmpty(modalToShow))
+            //{
+            //    // Only show modal if we are NOT coming from btnServerApproveNotes
+            //    // (which already handles modal logic and shouldn't reopen anything)
+            //    if (!IsPostBack || Request.Form["__EVENTTARGET"] != btnServerApproveNotes.UniqueID)
+            //    {
+            //        ScriptManager.RegisterStartupScript(this, GetType(), "ShowModalAfterPostback",
+            //            $"setTimeout(function() {{ window.{modalToShow}(); }}, 300);", true);
+            //    }
+
+            //    // Clear the modal trigger regardless
+            //    hdnShowModal.Value = "";
+            //}
 
             // Retrieve requestId from ViewState if available
             if (ViewState["RequestId"] != null)
@@ -92,11 +108,18 @@ namespace ClaimKitv1
 
             try
             {
+                DateTime startTime = DateTime.Now;
+
                 // Log the action
-                _logger.LogUserAction("Review / Enhance Notes Initiated", $"Doctor: {txtDoctorName.Text}, Patient ID: {txtPatientId.Text}");
+                _logger.LogUserAction("Review / Enhance Notes Initiated", $"Doctor: {txtDoctorName.Text}, Patient ID: {txtPatientId.Text}, Start Time: {FormatResponseTime(TimeSpan.FromTicks(startTime.Ticks))}");
 
                 // Register async task
                 RegisterAsyncTask(new PageAsyncTask(PerformReviewAndEnhanceAsync));
+
+                DateTime endTime = DateTime.Now;
+                TimeSpan responseTime = endTime - startTime;
+
+                _logger.LogUserAction("Review / Enhance Notes Ended", $"Patient ID: {txtPatientId.Text}, End Time: {FormatResponseTime(TimeSpan.FromTicks(endTime.Ticks))}, Response Time: {FormatResponseTime(responseTime)}");
 
                 // Show loading indicator (UI feedback)
                 ScriptManager.RegisterStartupScript(this, GetType(), "ShowLoading",
@@ -261,6 +284,8 @@ namespace ClaimKitv1
                 // Log the action
                 _logger.LogUserAction("Approved Enhanced Notes",
                     $"Request ID: {_requestId}, Section Count: {selectedSections.Count}");
+
+                hdnShowModal.Value = "";
             }
             catch (Exception ex)
             {
@@ -398,7 +423,6 @@ namespace ClaimKitv1
 
         #region Async API Call Methods
 
-        // Combined method to perform review and auto-enhance
         private async Task PerformReviewAndEnhanceAsync()
         {
             try
@@ -435,39 +459,45 @@ namespace ClaimKitv1
                 _logger.LogUserAction("Sending Review Request",
                     $"Patient ID: {reviewRequest.HospitalPatientId}, Insurance: {reviewRequest.InsuranceCompany}");
 
-                // Call API service
-                var response = await _apiService.ReviewNotesAsync(reviewRequest);
+                DateTime startTime = DateTime.Now;
+
+                // Call ReviewNotesAsync API service
+                var reviewResponse = await _apiService.ReviewNotesAsync(reviewRequest);
+                DateTime endTime = DateTime.Now;
+                reviewResponse.ResponseTime = endTime - startTime;
 
                 // Process review response
-                ProcessReviewResponse(response);
+                ProcessReviewResponse(reviewResponse);
 
-                // If review was successful, automatically enhance notes
-                //if (response.IsSuccess && !string.IsNullOrEmpty(response.RequestId))
-                //{
-                //    _requestId = response.RequestId;
-                //    ViewState["RequestId"] = _requestId;
+                //If review was successful, automatically enhance notes
+                if (reviewResponse.IsSuccess && !string.IsNullOrEmpty(reviewResponse.RequestId))
+                {
+                    _requestId = reviewResponse.RequestId;
+                    ViewState["RequestId"] = _requestId;
 
-                //    // Log the enhancement action
-                //    _logger.LogUserAction("Auto-Enhancement Starting", $"Request ID: {_requestId}");
+                    // Log the enhancement action
+                    _logger.LogUserAction("Auto-Enhancement Starting", $"Request ID: {_requestId}");
 
-                //    // Create enhance request with proper parameters
-                //    var enhanceRequest = new EnhanceRequest
-                //    {
-                //        HospitalId = ConfigurationService.HospitalId,
-                //        ClaimKitApiKey = ConfigurationService.ClaimKitApiKey,
-                //        RequestId = _requestId
-                //    };
+                    // Create enhance request with proper parameters
+                    var enhanceRequest = new EnhanceRequest
+                    {
+                        HospitalId = ConfigurationService.HospitalId,
+                        ClaimKitApiKey = ConfigurationService.ClaimKitApiKey,
+                        RequestId = _requestId
+                    };
 
-                //    // Call API service for enhancement
-                //    var enhanceResponse = await _apiService.EnhanceNotesAsync(enhanceRequest);
+                    startTime = DateTime.Now;
+                    // Call EnhanceNotesAsync API service for enhancement
+                    var enhanceResponse = await _apiService.EnhanceNotesAsync(enhanceRequest);
+                    endTime = DateTime.Now;
+                    enhanceResponse.ResponseTime = endTime - startTime;
+                    // Process enhance response
+                    ProcessEnhanceResponse(enhanceResponse);
 
-                //    // Process enhance response
-                //    ProcessEnhanceResponse(enhanceResponse);
-
-                //    // Log the combined operation completion
-                //    _logger.LogUserAction("Review and Enhance Completed",
-                //        $"Request ID: {_requestId}, Review Status: {response.Status}, Enhance Status: {enhanceResponse.Status}");
-                //}
+                    // Log the combined operation completion
+                    _logger.LogUserAction("Review and Enhance Completed",
+                        $"Request ID: {_requestId}, Review Status: {reviewResponse.Status}, Enhance Status: {enhanceResponse.Status}");
+                }
             }
             catch (Exception ex)
             {
@@ -481,9 +511,6 @@ namespace ClaimKitv1
                     "document.getElementById('loadingIndicator').style.display = 'none';", true);
             }
         }
-
-        // PerformReviewAsync and PerformEnhanceAsync methods for backward compatibility
-        // They won't be called directly from the UI anymore
 
         private async Task PerformReviewAsync()
         {
@@ -521,15 +548,18 @@ namespace ClaimKitv1
                 _logger.LogUserAction("Sending Review Request",
                     $"Patient ID: {reviewRequest.HospitalPatientId}, Insurance: {reviewRequest.InsuranceCompany}");
 
-                // Call API service
-                var response = await _apiService.ReviewNotesAsync(reviewRequest);
+                DateTime startTime = DateTime.Now;
+                // Call ReviewNotesAsync API service
+                var reviewResponse = await _apiService.ReviewNotesAsync(reviewRequest);
+                DateTime endTime = DateTime.Now;
+                reviewResponse.ResponseTime = endTime - startTime;
 
                 // Process response
-                ProcessReviewResponse(response);
+                ProcessReviewResponse(reviewResponse);
 
-                if (response.IsSuccess)
+                if (reviewResponse.IsSuccess)
                 {
-                    _requestId = response.RequestId;
+                    _requestId = reviewResponse.RequestId;
                     ViewState["RequestId"] = _requestId;
 
                     // Automatically perform enhance after successful review
@@ -571,15 +601,18 @@ namespace ClaimKitv1
                 // Clear debug log and add request
                 _logger.LogUserAction("Enhance Request", JsonConvert.SerializeObject(enhanceRequest));
 
+                DateTime startTime = DateTime.Now;
                 // Call API service
-                var response = await _apiService.EnhanceNotesAsync(enhanceRequest);
+                var enhanceResponse = await _apiService.EnhanceNotesAsync(enhanceRequest);
+                DateTime endTime = DateTime.Now;
+                enhanceResponse.ResponseTime = endTime - startTime;
 
                 // Log raw response for debugging
-                _logger.LogUserAction("Enhance Response", response.RawResponse);
-                _logger.LogApiCall(WebConfigurationManager.AppSettings["ClaimKitApiUrl"], JsonConvert.SerializeObject(enhanceRequest), response.RawResponse, true);
+                _logger.LogUserAction("Enhance Response", enhanceResponse.RawResponse);
+                _logger.LogApiCall(WebConfigurationManager.AppSettings["ClaimKitApiUrl"], JsonConvert.SerializeObject(enhanceRequest), enhanceResponse.RawResponse, true);
 
                 // Process response
-                ProcessEnhanceResponse(response);
+                ProcessEnhanceResponse(enhanceResponse);
             }
             catch (Exception ex)
             {
@@ -633,14 +666,20 @@ namespace ClaimKitv1
                 // Log request for debugging
                 _logger.LogUserAction("Claim Request", JsonConvert.SerializeObject(generateClaimRequest));
 
+                DateTime startTime = DateTime.Now;
+
                 // Call API service
-                var response = await _apiService.GenerateClaimAsync(generateClaimRequest);
+                var generateClaimResponse = await _apiService.GenerateClaimAsync(generateClaimRequest);
+
+                DateTime endTime = DateTime.Now;
+                generateClaimResponse.ResponseTime = endTime - startTime;
 
                 // Log raw response
-                _logger.LogUserAction("Claim Response", response.RawResponse);
+                _logger.LogUserAction("Claim Response",
+                    $"Response: {generateClaimResponse.RawResponse}, Response Time: {FormatResponseTime(generateClaimResponse.ResponseTime)}");
 
                 // Process response
-                ProcessGenerateClaimResponse(response);
+                ProcessGenerateClaimResponse(generateClaimResponse);
             }
             catch (Exception ex)
             {
@@ -663,13 +702,15 @@ namespace ClaimKitv1
         {
             if (response == null)
             {
-                DisplayError("No response received from the medical records system.");
+                DisplayError($"No response received from the medical records system. Response Time: {FormatResponseTime(response.ResponseTime)}");
                 return;
             }
 
             // Log the response
             _logger.LogUserAction("Review Response Received",
-                $"Success: {response.IsSuccess}, Message: {response.Message}");
+                $"Success: {response.IsSuccess}, Message: {response.Message}, Response Time: {FormatResponseTime(response.ResponseTime)}");
+
+            DateTime processingStartTime = DateTime.Now;
 
             if (response.IsSuccess)
             {
@@ -681,11 +722,24 @@ namespace ClaimKitv1
                     return;
                 }
 
-                ViewState["RequestId"] = _requestId;
+                ScriptManager.RegisterStartupScript(this, GetType(), "SetRequestId",
+                            $"if(typeof window.setCurrentRequestId === 'function') {{ window.setCurrentRequestId('{_requestId}'); }} else {{ currentRequestId = '{_requestId}'; console.log('Set request ID to: {_requestId}'); }}", true);
+
+                // Also, set the hidden field to ensure we have a fallback:
+                if (hdnRequestId != null)
+                {
+                    hdnRequestId.Value = _requestId;
+                }
+
+                ViewState["RequestId"] = hdnRequestId.Value = _requestId;
 
                 // Display success message
                 lblStatus.Text = $"<div class='success'>Status: {FormatStatusMessage(response.Message)}</div>";
                 lblRequestId.Text = $"<div>Request ID: {_requestId}</div>";
+
+                // Set the client-side currentRequestId variable to enable modal transitions
+                ScriptManager.RegisterStartupScript(this, GetType(), "SetRequestId",
+                    $"currentRequestId = '{_requestId}'; console.log('Set request ID to: {_requestId}');", true);
 
                 // Bind review categories to repeater if available
                 if (response.Review != null && response.Review.Count > 0)
@@ -709,13 +763,18 @@ namespace ClaimKitv1
                 //// Hide loading indicator at the start of processing the response
                 //ScriptManager.RegisterStartupScript(this, GetType(), "HideLoadingFirst",
                 //    "if(document.getElementById('loadingIndicator')) document.getElementById('loadingIndicator').style.display = 'none';", true);
-
             }
             else
             {
                 // Display error message with a more user-friendly format
                 DisplayError($"The clinical notes review could not be completed: {FormatErrorMessage(response.Message)}");
             }
+
+            DateTime processingEndTime = DateTime.Now;
+            TimeSpan processingTime = processingEndTime - processingStartTime;
+            // Log the response
+            _logger.LogUserAction("Review Response Processed",
+                $"Message: {response.Message}, Processing Time: {FormatResponseTime(processingTime)}");
         }
 
         private void ProcessEnhanceResponse(EnhanceResponse response)
@@ -725,6 +784,12 @@ namespace ClaimKitv1
                 DisplayError("No response received from the system.");
                 return;
             }
+
+            // Log the response
+            _logger.LogUserAction("Enhance Response Received",
+                $"Success: {response.IsSuccess}, Message: {response.Message}, Response Time: {FormatResponseTime(response.ResponseTime)}");
+
+            DateTime processingStartTime = DateTime.Now;
 
             if (response.IsSuccess)
             {
@@ -773,7 +838,7 @@ namespace ClaimKitv1
 
                         // Log the successful formatting
                         _logger.LogUserAction("Enhanced Notes Displayed",
-                            $"Request ID: {_requestId}, Sections: {enhancedNotesObj["sections"]?.Count() ?? 0}");
+                            $"Request ID: {_requestId}, Sections: {enhancedNotesObj["sections"]?.Count() ?? 0}, Response Time: {FormatResponseTime(response.ResponseTime)}");
                     }
                     catch (Exception ex)
                     {
@@ -798,6 +863,12 @@ namespace ClaimKitv1
                 // Display error message
                 DisplayError($"The clinical notes enhancement could not be completed: {FormatErrorMessage(response.Message)}");
             }
+
+            DateTime processingEndTime = DateTime.Now;
+            TimeSpan processingTime = processingEndTime - processingStartTime;
+            // Log the response
+            _logger.LogUserAction("Enhance Response Processed",
+                $"Message: {response.Message}, Processing Time: {FormatResponseTime(processingTime)}");
         }
 
         private void ProcessGenerateClaimResponse(GenerateClaimResponse response)
@@ -807,6 +878,11 @@ namespace ClaimKitv1
                 DisplayError("No response received from the system.");
                 return;
             }
+            // Log the response
+            _logger.LogUserAction("Claim Response Received",
+                $"Success: {response.IsSuccess}, Message: {response.Message}, Response Time: {FormatResponseTime(response.ResponseTime)}");
+
+            DateTime processingStartTime = DateTime.Now;
 
             if (response.IsSuccess)
             {
@@ -826,9 +902,17 @@ namespace ClaimKitv1
             }
             else
             {
+                var errorMessage = response.Message.ToString();
+                var errorreason = JsonConvert.DeserializeObject<dynamic>(response.RawResponse)?.message?.ToString();
                 // Display error message
-                DisplayError($"The insurance claim generation could not be completed: {FormatErrorMessage(response.Message)}");
+                DisplayError($"The insurance claim generation could not be completed: {FormatErrorMessage(errorreason)} and {FormatErrorMessage(response.Message)}, Response Time: {FormatResponseTime(response.ResponseTime)}");
             }
+
+            DateTime processingEndTime = DateTime.Now;
+            TimeSpan processingTime = processingEndTime - processingStartTime;
+            // Log the response
+            _logger.LogUserAction("Claim Response Processed",
+                $"Message: {response.Message}, Processing Time: {FormatResponseTime(processingTime)}");
         }
 
         private void StoreEnhancedNotesData(JObject enhancedNotesObj)
@@ -1037,6 +1121,22 @@ namespace ClaimKitv1
             }
 
             return "result-neutral";
+        }
+
+        private string FormatResponseTime(TimeSpan timeSpan)
+        {
+            int minutes = (int)timeSpan.TotalMinutes;
+            int seconds = (int)(timeSpan.TotalSeconds - (minutes * 60));
+            int milliseconds = timeSpan.Milliseconds;
+
+            if (minutes > 0)
+            {
+                return $"{minutes} m {seconds}.{milliseconds:D3} s";
+            }
+            else
+            {
+                return $"{seconds}.{milliseconds:D3} s";
+            }
         }
 
         private void ResetResultPanels()

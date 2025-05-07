@@ -168,6 +168,15 @@ namespace ClaimKitv1
         protected global::System.Web.UI.WebControls.HiddenField hdnSelectedNotes;
 
         /// <summary>
+        /// hdnRequestId control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.HiddenField hdnRequestId;
+
+        /// <summary>
         /// pnlActionButtons control.
         /// </summary>
         /// <remarks>

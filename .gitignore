@@ -361,3 +361,7 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+/Saved Notes
+/Content/css/modal-styles.css
+*.aspx
+*.cs

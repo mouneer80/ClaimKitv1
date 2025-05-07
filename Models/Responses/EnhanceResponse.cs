@@ -10,5 +10,8 @@ namespace ClaimKitv1.Models.Responses
     {
         [JsonProperty("data")]
         public EnhancedData Data { get; set; }
+
+        [JsonIgnore]
+        public TimeSpan ResponseTime { get; set; }
     }
 }

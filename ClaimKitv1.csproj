@@ -71,31 +71,28 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Content\css\styles.css" />
-    <Content Include="Content\css\modal-styles.css" />
-    <Content Include="Content\js\claimkit-merged.js" />
     <Content Include="Content\js\claimkit.js" />
-    <Content Include="Content\js\ClaimKitv1-Modal.js" />
-    <Content Include="Content\js\enhanced-notes.js" />
+    <Content Include="Content\js\claimkit-modal.js" />
+    <Content Include="Default1.aspx" />
     <Content Include="Default.aspx" />
-    <Content Include="Default2.aspx" />
     <Content Include="Global.asax" />
     <Content Include="Web.config" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App_Start\RouteConfig.cs" />
+    <Compile Include="Default1.aspx.cs">
+      <DependentUpon>Default1.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Default1.aspx.designer.cs">
+      <DependentUpon>Default1.aspx</DependentUpon>
+    </Compile>
     <Compile Include="Default.aspx.cs">
       <DependentUpon>Default.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
     </Compile>
     <Compile Include="Default.aspx.designer.cs">
       <DependentUpon>Default.aspx</DependentUpon>
-    </Compile>
-    <Compile Include="Default2.aspx.cs">
-      <DependentUpon>Default2.aspx</DependentUpon>
-      <SubType>ASPXCodeBehind</SubType>
-    </Compile>
-    <Compile Include="Default2.aspx.designer.cs">
-      <DependentUpon>Default2.aspx</DependentUpon>
     </Compile>
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
