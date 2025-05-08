@@ -1006,7 +1006,6 @@ function processObjectSection(section, sectionKey) {
         const medications = section.medications || section;
         if (Array.isArray(medications)) {
             html += '<div class="medications-container">';
-            html += '<h4 class="medications-title">Medications:</h4>';
             html += '<div class="medications-list">';
 
             medications.forEach(medication => {
@@ -1037,7 +1036,6 @@ function processObjectSection(section, sectionKey) {
         const conditions = section.conditions || [];
         if (Array.isArray(conditions)) {
             html += '<div class="conditions-container">';
-            html += '<h4 class="conditions-title">Conditions:</h4>';
             html += '<div class="conditions-list">';
 
             conditions.forEach(condition => {
@@ -1059,7 +1057,6 @@ function processObjectSection(section, sectionKey) {
         const procedures = section.procedures || [];
         if (Array.isArray(procedures)) {
             html += '<div class="procedures-container">';
-            html += '<h4 class="procedures-title">Requested Procedures:</h4>';
             html += '<div class="procedures-list">';
 
             procedures.forEach(procedure => {
@@ -1107,7 +1104,6 @@ function processArraySection(array, sectionKey) {
                 (array[0].name !== undefined && array[0].dosage !== undefined))) {
             // Process as medications
             html += '<div class="medications-container">';
-            html += '<h4 class="medications-title">Medications:</h4>';
             html += '<div class="medications-list">';
 
             array.forEach(medication => {
@@ -1136,7 +1132,6 @@ function processArraySection(array, sectionKey) {
                 (array[0].title !== undefined && array[0].description !== undefined))) {
             // Process as conditions
             html += '<div class="conditions-container">';
-            html += '<h4 class="conditions-title">Conditions:</h4>';
             html += '<div class="conditions-list">';
 
             array.forEach(condition => {
@@ -1156,7 +1151,6 @@ function processArraySection(array, sectionKey) {
                 (array[0].name !== undefined && array[0].cpt_code !== undefined))) {
             // Process as procedures
             html += '<div class="procedures-container">';
-            html += '<h4 class="procedures-title">Requested Procedures:</h4>';
             html += '<div class="procedures-list">';
 
             array.forEach(procedure => {
@@ -1777,20 +1771,51 @@ function formatReviewResults(containerId) {
 }
 
 // Function to forcibly hide the loading indicator
+//window.forceHideLoadingIndicator = function () {
+//    // Direct DOM manipulation to hide the loading indicator
+//    var loadingIndicator = document.getElementById('loadingIndicator');
+//    if (loadingIndicator) {
+//        loadingIndicator.style.display = 'none';
+//    }
+
+//    // Use a failsafe timer to ensure it stays hidden
+//    //setTimeout(function () {
+//    //    var loadingIndicator = document.getElementById('loadingIndicator');
+//    //    if (loadingIndicator) {
+//    //        loadingIndicator.style.display = 'none';
+//    //    }
+//    //}, 500);
+//};
+
 window.forceHideLoadingIndicator = function () {
-    // Direct DOM manipulation to hide the loading indicator
+    console.log("Force hiding loading indicator");
+
+    // Try multiple methods to ensure it gets hidden
     var loadingIndicator = document.getElementById('loadingIndicator');
     if (loadingIndicator) {
         loadingIndicator.style.display = 'none';
+        loadingIndicator.style.visibility = 'hidden';
+        loadingIndicator.style.opacity = '0';
     }
 
-    // Use a failsafe timer to ensure it stays hidden
-    //setTimeout(function () {
-    //    var loadingIndicator = document.getElementById('loadingIndicator');
-    //    if (loadingIndicator) {
-    //        loadingIndicator.style.display = 'none';
-    //    }
-    //}, 500);
+    // Use a redundant approach with jQuery if available
+    if (typeof $ !== 'undefined') {
+        $('#loadingIndicator').hide();
+    }
+
+    // Use a failsafe timer that continues trying to hide it
+    var attempts = 0;
+    var hideInterval = setInterval(function () {
+        var indicator = document.getElementById('loadingIndicator');
+        if (indicator) {
+            indicator.style.display = 'none';
+        }
+
+        attempts++;
+        if (attempts >= 5) {
+            clearInterval(hideInterval);
+        }
+    }, 500);
 };
 
 // Call the server to enhance notes
@@ -1892,3 +1917,93 @@ window.logDebug = function (message) {
         debugPanel.appendChild(entry);
     }
 };
+
+document.addEventListener('DOMContentLoaded', function () {
+    // Create a more robust loading indicator management system
+    window.loadingIndicator = {
+        show: function () {
+            var indicator = document.getElementById('loadingIndicator');
+            if (indicator) {
+                indicator.style.display = 'flex';
+                console.log('Loading indicator shown');
+            }
+        },
+        hide: function () {
+            var indicator = document.getElementById('loadingIndicator');
+            if (indicator) {
+                indicator.style.display = 'none';
+                console.log('Loading indicator hidden');
+            }
+        },
+        isVisible: function () {
+            var indicator = document.getElementById('loadingIndicator');
+            return indicator && indicator.style.display !== 'none';
+        }
+    };
+
+    // Override existing functions to ensure loading indicator is properly hidden
+    var originalCloseModal = closeCurrentModal;
+    window.closeCurrentModal = function () {
+        // Call original function
+        if (typeof originalCloseModal === 'function') {
+            originalCloseModal();
+        }
+
+        // Always hide loading indicator when closing a modal
+        window.loadingIndicator.hide();
+    };
+
+    // Add event handlers to intercept modal events
+    document.body.addEventListener('click', function (e) {
+        // If clicking a modal close button, hide loading indicator
+        if (e.target.classList.contains('close-modal') ||
+            e.target.parentElement.classList.contains('close-modal')) {
+            window.setTimeout(window.loadingIndicator.hide, 100);
+        }
+    });
+
+    // Add event listener for Escape key
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && window.loadingIndicator.isVisible()) {
+            window.loadingIndicator.hide();
+        }
+    });
+
+    // Add a safety timeout to hide the loading indicator if it stays visible too long
+    window.setForceHideLoadingTimeout = function () {
+        window.setTimeout(function () {
+            if (window.loadingIndicator.isVisible()) {
+                console.log('Force hiding loading indicator after timeout');
+                window.loadingIndicator.hide();
+            }
+        }, 10000); // 10 seconds safety timeout
+    };
+
+    // Override the server endpoint callback functions
+    var originalShowReviewResultsModal = window.showReviewResultsModal;
+    window.showReviewResultsModal = function () {
+        window.loadingIndicator.hide();
+        if (typeof originalShowReviewResultsModal === 'function') {
+            originalShowReviewResultsModal();
+        }
+    };
+
+    var originalShowGeneratedClaimModal = window.showGeneratedClaimModal;
+    window.showGeneratedClaimModal = function () {
+        window.loadingIndicator.hide();
+        if (typeof originalShowGeneratedClaimModal === 'function') {
+            originalShowGeneratedClaimModal();
+        }
+    };
+
+    var originalShowEnhancedNotesModal = window.showEnhancedNotesModal;
+    window.showEnhancedNotesModal = function () {
+        window.loadingIndicator.hide();
+        if (typeof originalShowEnhancedNotesModal === 'function') {
+            originalShowEnhancedNotesModal();
+        }
+    };
+
+    // Force hide the loading indicator on page load, just in case
+    window.loadingIndicator.hide();
+});
