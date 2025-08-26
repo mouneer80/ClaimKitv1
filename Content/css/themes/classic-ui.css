@@ -1,0 +1,458 @@
+﻿/* ClaimKit - Classic UI Theme (Option 1) */
+/* This file maintains the default styling but includes necessary class selectors */
+
+/* Base styles for classic interface */
+.classic-ui .modal-content {
+    /*max-width: 1000px;*/
+    max-height: 85vh;
+    border-radius: 8px;
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.25);
+    border: 1px solid #e0e0e0;
+}
+
+.classic-ui .modal-header {
+    padding: 10px;
+    border-bottom: 1px solid #e9ecef;
+    background-color: #f8f9fa;
+}
+
+.classic-ui .modal-title {
+    color: #0056b3;
+    font-weight: 600;
+    font-size: 1.4rem;
+}
+
+.classic-ui .modal-body {
+    padding: 1px;
+    overflow-y: auto;
+    max-height: calc(85vh - 140px);
+}
+
+.classic-ui .modal-footer {
+    padding: 16px 20px;
+    border-top: 1px solid #e9ecef;
+    background-color: #f8f9fa;
+}
+
+.classic-ui .close-modal {
+    font-size: 14px;
+}
+
+    .classic-ui .close-modal:hover {
+        color: #343a40;
+    }
+
+/* Categories styling for review results */
+.classic-ui .categories-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 20px;
+}
+
+.classic-ui .category-item {
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid #eaeaea;
+}
+
+.classic-ui .category-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    cursor: pointer;
+    padding: 8px 0;
+}
+
+.classic-ui .category-title {
+    font-weight: 600;
+    color: #0056b3;
+    font-size: 1.15rem;
+}
+
+.classic-ui .category-content {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: #333;
+}
+
+.classic-ui .expand-icon {
+    font-size: 1.2rem;
+    transition: transform 0.3s;
+    color: #6c757d;
+}
+
+.classic-ui .collapsed .expand-icon {
+    transform: rotate(-90deg);
+}
+
+.classic-ui .collapsed .category-content {
+    display: none;
+}
+
+/* Enhanced notes and diagnosis selection styles */
+.classic-ui .enhanced-notes-container,
+.classic-ui .claim-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.classic-ui .notes-explanation,
+.classic-ui .claim-explanation {
+    background-color: #e6f3ff;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-left: 4px solid #0056b3;
+}
+
+.classic-ui .enhanced-note-item,
+.classic-ui .diagnosis-item,
+.classic-ui .action-item,
+.classic-ui .observation-item {
+    /*background-color: #f9f9f9;*/
+    border-radius: 8px;
+    padding: 6px;
+    margin-bottom: 5px;
+    /*border: 1px solid #eaeaea;*/
+}
+
+.classic-ui .note-selection,
+.classic-ui .diagnosis-selection {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    background-color: #f0f0f0;
+    padding: 8px 12px;
+    border-radius: 4px;
+}
+
+    .classic-ui .note-selection label,
+    .classic-ui .diagnosis-selection label {
+        margin-left: 8px;
+        font-weight: 500;
+        color: #444;
+    }
+
+.classic-ui .note-content,
+.classic-ui .diagnosis-content {
+    background-color: #fff;
+    padding: 12px;
+    border-radius: 4px;
+    border: 1px solid #e0e0e0;
+}
+
+/* Status badges */
+.classic-ui .status-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-left: 10px;
+}
+
+.classic-ui .status-consistent,
+.classic-ui .status-necessary,
+.classic-ui .status-compliant {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.classic-ui .status-inconsistent,
+.classic-ui .status-unnecessary,
+.classic-ui .status-non-compliant {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.classic-ui .status-not-applicable,
+.classic-ui .status-neutral {
+    background-color: #e2e3e5;
+    color: #383d41;
+}
+
+/* Button styles */
+.classic-ui .btn-primary {
+    background-color: #0056b3;
+    border-color: #0056b3;
+}
+
+    .classic-ui .btn-primary:hover {
+        background-color: #004494;
+        border-color: #004494;
+    }
+
+.classic-ui .btn-secondary {
+    background-color: #6c757d;
+    border-color: #6c757d;
+}
+
+    .classic-ui .btn-secondary:hover {
+        background-color: #5a6268;
+        border-color: #5a6268;
+    }
+
+/* This is left intentionally simple as it's meant to maintain the default styling */
+
+.status-info {
+    margin-bottom: 10px;
+    font-weight: 500;
+}
+
+.request-info {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+/* Feedback display */
+.feedback-container {
+    margin-top: 15px;
+    background-color: #f9f9f9;
+    border-radius: 5px;
+    padding: 10px;
+    border-left: 3px solid #3498db;
+}
+
+.feedback-step {
+    margin-bottom: 15px;
+}
+
+    .feedback-step h4 {
+        margin: 0 0 10px 0;
+        padding-bottom: 5px;
+        border-bottom: 1px solid #ddd;
+        color: #2c3e50;
+        font-weight: 600;
+    }
+
+.feedback-category {
+    margin: 0 0 12px 10px;
+    padding-left: 10px;
+    border-left: 2px solid #e0e0e0;
+}
+
+    .feedback-category h5 {
+        margin: 5px 0;
+        color: #34495e;
+        font-weight: 500;
+    }
+
+.feedback-result {
+    margin: 5px 0 5px 10px;
+    padding: 5px 8px;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+.feedback-reasoning {
+    margin: 5px 0 5px 10px;
+    line-height: 1.4;
+}
+
+.review-explanation {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border-left: 4px solid #0056b3;
+}
+
+/* ==========================================================================
+   Review Categories
+   ========================================================================== */
+.categories-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 20px;
+}
+
+.category-item {
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid #eaeaea;
+    margin-bottom: 15px;
+}
+
+.category-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    cursor: pointer;
+    padding: 8px 0;
+}
+
+.category-title {
+    font-weight: 600;
+    color: #0056b3;
+    font-size: 1.15rem;
+}
+
+.enhanced-notes-container {
+    font-family: Arial, sans-serif;
+    /*padding: 10px;*/
+    /*margin-bottom: 20px;*/
+}
+
+.notes-explanation {
+    background-color: #e6f3ff;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-left: 4px solid #0056b3;
+}
+
+.sections-container {
+    margin: 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.clinical-subsections-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1.5rem;
+    /*margin-top: 1rem;*/
+}
+
+.clinical-subsection {
+    background: #f8f9fa;
+    padding: 0.3rem;
+    border-radius: 0.5rem;
+    border-left: 4px solid #007bff;
+}
+
+.subsection-title {
+    /*margin-bottom: 0.75rem;*/
+    color: #495057;
+    font-weight: 600;
+}
+/* Section panel styling */
+.section-panel {
+    /*margin-bottom: 5px;*/
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+    transition: box-shadow 0.3s ease;
+}
+
+.section-content {
+    padding: 5px;
+    background-color: #fff;
+    max-height: 500px;
+    overflow-y: auto;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+}
+
+    .section-content.collapsed {
+        max-height: 0;
+        padding: 0 15px;
+        overflow: hidden;
+    }
+
+.section-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 0.5rem;
+    margin-bottom: 15px;
+}
+
+.field-item {
+    padding: 0.25rem;
+}
+
+.field-name {
+    font-weight: 500;
+    margin-right: 0.25rem;
+    color: #4a5568;
+}
+.subsection {
+    margin-bottom: 0.75rem;
+    padding: 10px;
+    background-color: #f9f9f9;
+    border-radius: 4px;
+}
+
+    .subsection h4 {
+        font-size: 1rem;
+        margin: 0 0 10px 0;
+        color: #495057;
+        border-bottom: 1px solid #ddd;
+        padding-bottom: 5px;
+    }
+
+.medications-container {
+    width: 100%;
+}
+
+.medications-table-container {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.medications-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    font-size: small;
+}
+
+    .medications-table thead {
+        background: #e9ecef;
+    }
+
+    .medications-table th {
+        padding: 0.1rem;
+        text-align: left;
+        font-weight: 600;
+        color: #495057;
+        border-bottom: 2px solid #dee2e6;
+    }
+
+.medications-name {
+    padding: 1rem;
+    border-bottom: 1px solid #dee2e6;
+    font-weight: 500;
+}
+
+.medications-dosage, medication-frequency, medication-duration {
+    padding: 1rem;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.medications-code {
+    padding: 1rem;
+    border-bottom: 1px solid #dee2e6;
+    font-size: 0.875rem;
+}
+
+.medications-description {
+    padding: 1rem;
+    border-bottom: 1px solid #dee2e6;
+    max-width: 200px;
+    word-wrap: break-word;
+}
+
+.medication-details,
+.procedure-code {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.medication-description,
+.condition-description {
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    font-style: italic;
+}

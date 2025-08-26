@@ -16,5 +16,8 @@ namespace ClaimKitv1.Models
 
         [JsonProperty("treatment")]
         public string Treatment { get; set; }
+
+        [JsonProperty("id")]
+        public string Id { get; set; }
     }
 }

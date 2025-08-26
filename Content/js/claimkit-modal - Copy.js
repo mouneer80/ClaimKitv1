@@ -275,7 +275,6 @@ function formatInsuranceClaimData(claimData) {
 
     return formattedContainer;
 }
-
 // Store modal state
 const modalState = {
     activeModal: null,
@@ -283,41 +282,8 @@ const modalState = {
     selectedEnhancedNotes: [],
     selectedDiagnoses: []
 };
-
 // Store selected sections
 var selectedSections = [];
-
-// Define section priorities for doctor workflow optimization
-const SECTION_PRIORITIES = {
-    'doctors_visit_notes': 1,     // Highest priority - most important
-    'medications': 2,             // Second priority - all details needed
-    'other_conditions': 3,        // Third priority - supporting info
-    'requested_procedure': 4
-};
-
-// Section display settings
-const SECTION_DISPLAY_CONFIG = {
-    'doctors_visit_notes': {
-        expanded: true,
-        style: 'primary',
-        title: 'Clinical Assessment & Plan'
-    },
-    'medications': {
-        expanded: true,
-        style: 'success',
-        title: 'Medications & Prescriptions'
-    },
-    'other_conditions': {
-        expanded: false,
-        style: 'warning',
-        title: 'Additional Conditions & Risk Factors'
-    },
-    'requested_procedure': {
-        expanded: false,
-        style: 'info',
-        title: 'Requested Procedures & Tests'
-    }
-};
 
 document.addEventListener('DOMContentLoaded', function () {
     // Initialize the modal system
@@ -427,7 +393,9 @@ function createModalFromPanel(panelId) {
 
         // Prepare footer buttons based on panel type
         let footerButtons = '<button type="button" class="modal-btn modal-btn-secondary close-modal">Close</button>';
-
+        //<button type="button" class="modal-btn modal-btn-primary" onclick="window.enhanceReviewedNotes()">Enhance These Notes</button>
+        //<button type="button" class="modal-btn modal-btn-primary" onclick="window.generateClaimFromEnhanced()">Generate Insurance Claim</button>
+        //<button type="button" id="btnApproveEnhancedNotes" class="modal-btn modal-btn-primary">Approve Selected Notes</button>
         if (panelId === 'pnlReviewResults') {
             footerButtons = `
                 <button type="button" class="modal-btn modal-btn-primary" onclick="window.showEnhancedNotesModal()">Continue to Enhanced Notes</button>
@@ -446,19 +414,10 @@ function createModalFromPanel(panelId) {
 
         // Build modal structure
         modal.innerHTML = `
-            <div class="modal-content enhanced-notes-modal">
+            <div class="modal-content">
                 <div class="modal-header">
                     <h2 class="modal-title">${title}</h2>
-                    <span class="close-modal">&times;</span> 
-                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAllSections()">
-                        <i class="fas fa-check-square"></i> Select All
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="deselectAllSections()">
-                        <i class="fas fa-square"></i> Deselect All
-                    </button>
-                    <button type="button" class="btn btn-primary btn-lg" onclick="approveSelectedSections()">
-                        <i class="fas fa-thumbs-up"></i> Approve Selected
-                    </button>
+                    <span class="close-modal">&times;</span>
                 </div>
                 <div class="modal-body" id="modal-body-${panelId}">
                     <!-- Panel content will be moved here -->
@@ -678,8 +637,8 @@ function switchTab(tabId) {
 }
 
 /**
- * Enhanced version that handles the new ClaimKit enhanced notes structure
- * Optimized for doctor workflow with section prioritization
+ * Enhanced version of enhanceNotesWithSelectionOptions that handles any JSON structure
+ * while maintaining compatibility with the existing modal system
  */
 function enhanceNotesWithSelectionOptions(modalBody) {
     try {
@@ -774,9 +733,35 @@ function enhanceNotesWithSelectionOptions(modalBody) {
         const enhancedNotes = JSON.parse(jsonData);
         console.log('Enhanced notes parsed successfully');
         console.log(enhancedNotes);
+        // Build the formatted HTML for sections
+        let html = `
+            <div class="enhanced-notes-container">
+                <div class="selection-controls">
+                    <div class="selection-actions">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="selectAllSections()">Select All</button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="deselectAllSections()">Deselect All</button>
+                        <button type="button" class="btn btn-primary" onclick="approveSelectedSections()">Approve Selected Sections</button>
+                    </div>
+                </div>
+                <div class="sections-container">
+        `;
 
-        // Build the optimized HTML for doctor workflow
-        const html = buildOptimizedEnhancedNotesHTML(enhancedNotes);
+        // Process the enhanced notes object based on structure
+        if (enhancedNotes.sections) {
+            // Process sections
+            html += processEnhancedNoteSections(enhancedNotes.sections, selectedSections);
+        } else if (Array.isArray(enhancedNotes)) {
+            // If it's an array, process as array of sections
+            html += processEnhancedNoteArray(enhancedNotes, selectedSections);
+        } else {
+            // If it's a generic object, handle it differently
+            html += processGenericEnhancedNote(enhancedNotes, selectedSections);
+        }
+
+        html += `
+                </div>
+            </div>
+        `;
 
         // Set the HTML
         displayContainer.innerHTML = html;
@@ -792,56 +777,51 @@ function enhanceNotesWithSelectionOptions(modalBody) {
 }
 
 /**
- * Build optimized HTML for doctor workflow with section prioritization
+ * Process sections from the enhanced notes
  */
-function buildOptimizedEnhancedNotesHTML(enhancedNotes) {
-    let html = `
-        <div class="enhanced-notes-container doctor-optimized">
-            <div class="sections-container">
-    `;
-
-    // Process sections with priority ordering
-    if (enhancedNotes.sections) {
-        html += processOptimizedSections(enhancedNotes.sections);
-    } else if (Array.isArray(enhancedNotes)) {
-        html += processEnhancedNoteArray(enhancedNotes, selectedSections);
-    } else {
-        html += processGenericEnhancedNote(enhancedNotes, selectedSections);
-    }
-
-    html += `
-            </div>
-        </div>
-    `;
-
-    return html;
-}
-
-/**
- * Process sections with doctor workflow optimization
- */
-function processOptimizedSections(sections) {
+function processEnhancedNoteSections(sections, selectedSectionsArray) {
     let html = '';
-    console.log(sections);
-    // Sort sections by priority
-    const sortedSections = Object.keys(sections)
-        .filter(sectionKey => sectionKey !== 'patient_information' && sectionKey !== 'vitals')
-        .sort((a, b) => {
-        const priorityA = SECTION_PRIORITIES[a] || 10;
-        const priorityB = SECTION_PRIORITIES[b] || 10;
-        return priorityA - priorityB;
-    });
 
-    sortedSections.forEach(sectionKey => {
+    // Process each section
+    Object.keys(sections).forEach(sectionKey => {
         const section = sections[sectionKey];
-        const config = SECTION_DISPLAY_CONFIG[sectionKey] || {};
+        const sectionTitle = section.title || formatSectionName(sectionKey);
 
-        html += buildOptimizedSection(sectionKey, section, config);
-        
+        html += `
+            <div class="section-panel" id="section-${sectionKey}">
+                <div class="section-header">
+                    <div class="section-checkbox-container">
+                        <input type="checkbox" id="section-checkbox-${sectionKey}" 
+                            class="section-checkbox" data-section="${sectionKey}" checked>
+                        <label for="section-checkbox-${sectionKey}">${sectionTitle}</label>
+                    </div>
+                    <span class="section-toggle">▼</span>
+                </div>
+                <div class="section-content">
+        `;
 
-        // Add to selected sections by default (except minimized ones)
-        if (!selectedSections.includes(sectionKey)) {
-            selectedSections.push(sectionKey);
+        // Process the section based on its type and structure
+        if (typeof section === 'object' && section !== null) {
+            if (Array.isArray(section)) {
+                // Section is an array
+                html += processArraySection(section, sectionKey);
+            } else {
+                // Section is an object
+                html += processObjectSection(section, sectionKey);
+            }
+        } else {
+            // Simple value
+            html += `<div class="section-simple-value">${section}</div>`;
+        }
+
+        html += `
+                </div>
+            </div>
+        `;
+
+        // Add to selected sections by default
+        if (!selectedSectionsArray.includes(sectionKey)) {
+            selectedSectionsArray.push(sectionKey);
         }
     });
 
@@ -849,257 +829,107 @@ function processOptimizedSections(sections) {
 }
 
 /**
- * Build an optimized section display
+ * Process array of enhanced notes
  */
-function buildOptimizedSection(sectionKey, section, config) {
-    const sectionTitle = config.title || section.title || formatSectionName(sectionKey);
-    const isExpanded = config.expanded !== false;
-    const sectionStyle = config.style || 'secondary';
-
-    let html = `
-        <div class="section-panel priority-section ${isExpanded ? 'expanded' : ''}" id="section-${sectionKey}">
-            <div class="section-header section-${sectionStyle}">
-                <div class="section-checkbox-container">
-                    <input type="checkbox" id="section-checkbox-${sectionKey}" 
-                        class="section-checkbox" data-section="${sectionKey}" checked>
-                    <label for="section-checkbox-${sectionKey}" class="section-title-label">
-                        ${sectionTitle}
-                    </label>
-                </div>
-                <span class="section-toggle">${isExpanded ? '▼' : '▶'}</span>
-            </div>
-            <div class="section-content ${isExpanded ? '' : 'collapsed'}">
-    `;
-
-    // Process section content based on type
-    if (sectionKey === 'doctors_visit_notes') {
-        html += buildDoctorVisitNotesSection(section);
-    } else if (sectionKey === 'medications') {
-        html += buildMedicationsSection(section);
-    } else if (sectionKey === 'other_conditions') {
-        html += buildConditionsSection(section);
-    } else if (sectionKey === 'requested_procedure') {
-        html += buildProceduresSection(section);
-    } else {
-        html += buildGenericSection(section, sectionKey);
-    }
-
-    html += `
-            </div>
-        </div>
-    `;
-
-    return html;
-}
-
-/**
- * Build doctor visit notes section - HIGHEST PRIORITY
- */
-function buildDoctorVisitNotesSection(section) {
-    let html = '<div class="doctor-visit-notes-container">';
-
-    // Process subsections in logical order: observations -> diagnosis -> action_plan
-    const subsectionOrder = ['observations', 'diagnosis', 'action_plan'];
-
-    if (section.subsections) {
-        html += '<div class="clinical-subsections-grid">';
-        subsectionOrder.forEach(subsectionKey => {
-            if (section.subsections[subsectionKey]) {
-                const subsection = section.subsections[subsectionKey];
-                const subsectionTitle = subsection.title || formatFieldName(subsectionKey);
-
-                html += `<div class="clinical-subsection ${subsectionKey}-section">`;
-                html += `<h4 class="subsection-title">${subsectionTitle}</h4>`;
-
-                if (subsectionKey === 'observations' && subsection.items) {
-                    html += '<div class="observations-list">';
-                    subsection.items.forEach(observation => {
-                        html += `<div class="observation-item">• ${observation}</div>`;
-                    });
-                    html += '</div>';
-                } else if (subsectionKey === 'diagnosis' && subsection.items) {
-                    html += '<div class="diagnosis-list">';
-                    subsection.items.forEach(diagnosis => {
-                        if (diagnosis.name && diagnosis.icd_10_cm_code) {
-                            html += `
-                                <div class="diagnosis-item">
-                                    <div class="diagnosis-name">${diagnosis.name}</div>
-                                    <div class="diagnosis-code">ICD-10: ${diagnosis.icd_10_cm_code}</div>
-                                </div>
-                            `;
-                        }
-                    });
-                    html += '</div>';
-                } else if (subsectionKey === 'action_plan' && subsection.items) {
-                    html += '<div class="action-plan-list">';
-                    subsection.items.forEach((action, index) => {
-                        html += `<div class="action-item">${index + 1}. ${action}</div>`;
-                    });
-                    html += '</div>';
-                }
-
-                html += '</div>';
-            }
-        });
-
-        html += '</div>'; // Close clinical-subsections-grid
-    }
-
-    html += '</div>';
-    return html;
-}
-
-/**
- * Build medications section - ALL DETAILS REQUIRED
- */
-function buildMedicationsSection(section) {
-    let html = '<div class="medications-container">';
-
-    if (Array.isArray(section)) {
-        html += '<div class="medications-table-container">';
-        html += `
-            <table class="medications-table">
-                <thead>
-                    <tr>
-                        <th>Medication</th>
-                        <th>Dosage</th>
-                        <th>Frequency</th>
-                        <th>Duration</th>
-                        <th>Details</th>
-                        <th>Code</th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
-
-        section.forEach((medication, index) => {
-            if (medication.name && medication.name !== "Unavailable") {
-                const rowBg = index % 2 === 0 ? '#ffffff' : '#f8f9fa';
-                html += `
-                    <tr class="medication-row" style="background: ${rowBg};">
-                        <td class="medication-name">${medication.name}</td>
-                        <td class="medication-dosage">${medication.dosage || 'Not specified'}</td>
-                        <td class="medication-frequency">${medication.frequency || 'Not specified'}</td>
-                        <td class="medication-duration">${medication.duration || 'Not specified'}</td>
-                        <td class="medication-description">${medication.description || 'Not specified'}</td>
-                        <td class="medication-code">${medication.medication_code || 'Not specified'}</td>
-                    </tr>
-                `;
-            }
-        });
-
-        html += `
-                </tbody>
-            </table>
-        `;
-        html += '</div>';
-    }
-
-    html += '</div>';
-    return html;
-}
-
-/**
- * Build conditions section
- */
-function buildConditionsSection(section) {
-    let html = '<div class="conditions-container">';
-
-    if (section.conditions && Array.isArray(section.conditions)) {
-        html += '<div class="conditions-list">';
-        section.conditions.forEach(condition => {
-            html += `
-                <div class="condition-item">
-                    <div class="condition-title">${condition.title}</div>
-                    <div class="condition-description">${condition.description}</div>
-                </div>
-            `;
-        });
-        html += '</div>';
-    }
-
-    html += '</div>';
-    return html;
-}
-
-/**
- * Build procedures section
- */
-function buildProceduresSection(section) {
-    let html = '<div class="procedures-container">';
-
-    if (section.procedures && Array.isArray(section.procedures)) {
-        html += '<div class="procedures-list">';
-        section.procedures.forEach(procedure => {
-            html += `
-                <div class="procedure-item">
-                    <span class="procedure-name">${procedure.name}</span>
-                    <span class="procedure-code">CPT: ${procedure.cpt_code}</span>
-                </div>
-            `;
-        });
-        html += '</div>';
-    }
-
-    html += '</div>';
-    return html;
-}
-
-/**
- * Build generic section for unknown structure
- */
-function buildGenericSection(section, sectionKey) {
+function processEnhancedNoteArray(notesArray, selectedSectionsArray) {
     let html = '';
 
-    if (typeof section === 'object' && section !== null) {
-        if (Array.isArray(section)) {
-            html += processArraySection(section, sectionKey);
+    // Process each item in the array as a section
+    notesArray.forEach((item, index) => {
+        const sectionKey = `item-${index}`;
+        const sectionTitle = item.title || `Section ${index + 1}`;
+
+        html += `
+            <div class="section-panel" id="section-${sectionKey}">
+                <div class="section-header">
+                    <div class="section-checkbox-container">
+                        <input type="checkbox" id="section-checkbox-${sectionKey}" 
+                            class="section-checkbox" data-section="${sectionKey}" checked>
+                        <label for="section-checkbox-${sectionKey}">${sectionTitle}</label>
+                    </div>
+                    <span class="section-toggle">▼</span>
+                </div>
+                <div class="section-content">
+        `;
+
+        // Process based on type
+        if (typeof item === 'object' && item !== null) {
+            html += processObjectSection(item, sectionKey);
         } else {
-            html += processObjectSection(section, sectionKey);
+            html += `<div class="section-simple-value">${item}</div>`;
         }
-    } else {
-        html += `<div class="section-simple-value">${section}</div>`;
-    }
+
+        html += `
+                </div>
+            </div>
+        `;
+
+        // Add to selected sections by default
+        if (!selectedSectionsArray.includes(sectionKey)) {
+            selectedSectionsArray.push(sectionKey);
+        }
+    });
 
     return html;
 }
 
 /**
- * Get subsection icon based on type
+ * Process a generic enhanced note object that doesn't follow standard structure
  */
-function getSubsectionIcon(subsectionKey) {
-    const icons = {
-        'observations': '👁️',
-        'diagnosis': '🩺',
-        'action_plan': '📋',
-        'vitals': '📊'
-    };
-    return icons[subsectionKey] || '📌';
+function processGenericEnhancedNote(noteObject, selectedSectionsArray) {
+    let html = '';
+
+    // Process top-level properties as sections
+    Object.keys(noteObject).forEach(key => {
+        // Skip non-data properties
+        if (key === 'title' || key === 'style') {
+            return;
+        }
+
+        const value = noteObject[key];
+        const sectionKey = key;
+        const sectionTitle = formatSectionName(key);
+
+        html += `
+            <div class="section-panel" id="section-${sectionKey}">
+                <div class="section-header">
+                    <div class="section-checkbox-container">
+                        <input type="checkbox" id="section-checkbox-${sectionKey}" 
+                            class="section-checkbox" data-section="${sectionKey}" checked>
+                        <label for="section-checkbox-${sectionKey}">${sectionTitle}</label>
+                    </div>
+                    <span class="section-toggle">▼</span>
+                </div>
+                <div class="section-content">
+        `;
+
+        // Process based on type
+        if (typeof value === 'object' && value !== null) {
+            if (Array.isArray(value)) {
+                html += processArraySection(value, sectionKey);
+            } else {
+                html += processObjectSection(value, sectionKey);
+            }
+        } else {
+            html += `<div class="section-simple-value">${value}</div>`;
+        }
+
+        html += `
+                </div>
+            </div>
+        `;
+
+        // Add to selected sections by default
+        if (!selectedSectionsArray.includes(sectionKey)) {
+            selectedSectionsArray.push(sectionKey);
+        }
+    });
+
+    return html;
 }
 
 /**
- * Check if vital signs are abnormal
- */
-function checkVitalAbnormality(vitalName, vitalValue) {
-    const lowerVitalName = vitalName.toLowerCase();
-    const numericValue = parseFloat(vitalValue);
-
-    // Check for obviously abnormal values based on the sample data
-    if (lowerVitalName.includes('temperature') && (numericValue > 40 || numericValue < 35)) {
-        return true;
-    }
-    if (lowerVitalName.includes('heart_rate') && (numericValue > 120 || numericValue < 50)) {
-        return true;
-    }
-    if (lowerVitalName.includes('blood_pressure') && vitalValue.includes('678')) {
-        return true; // Obviously abnormal from sample data
-    }
-
-    return false;
-}
-
-/**
- * Process an object section (existing function, kept for compatibility)
+ * Process an object section
  */
 function processObjectSection(section, sectionKey) {
     let html = '';
@@ -1164,134 +994,249 @@ function processObjectSection(section, sectionKey) {
         html += '</div>'; // Close subsections-container
     }
 
-    return html;
-}
+    // Special handling for medications section
+    if (sectionKey === 'medications' || section.medications) {
+        const medications = section.medications || section;
+        if (Array.isArray(medications)) {
+            html += '<div class="medications-container">';
+            html += '<div class="medications-list">';
 
-/**
- * Process an array section (existing function, kept for compatibility)
- */
-function processArraySection(array, sectionKey) {
-    let html = '';
+            medications.forEach(medication => {
+                if (medication.name !== "Unavailable") {
+                    html += `
+                        <div class="medication-item">
+                            <div class="medication-header">
+                                <strong>${medication.name}</strong> - ${medication.dosage || ''}
+                            </div>
+                            <div class="medication-details">
+                                ${medication.frequency || ''}
+                                ${medication.duration ? ` · Duration: ${medication.duration}` : ''}
+                                ${medication.medication_code ? ` · Code: ${medication.medication_code}` : ''}
+                            </div>
+                            ${medication.description ? `<div class="medication-description">${medication.description}</div>` : ''}
+                        </div>
+                    `;
+                }
+            });
 
-    if (array.length > 0) {
-        // Generic array handling
-        html += '<div class="generic-array-container">';
-        html += `<h4 class="array-title">${formatSectionName(sectionKey)}:</h4>`;
-        html += '<ul class="generic-array-list">';
+            html += '</div>'; // Close medications-list
+            html += '</div>'; // Close medications-container
+        }
+    }
 
-        array.forEach(item => {
-            if (typeof item === 'object' && item !== null) {
-                // Try to extract a name or title
-                const label = item.name || item.title || item.description || JSON.stringify(item);
-                html += `<li>${label}</li>`;
+    // Special handling for conditions
+    if (sectionKey === 'other_conditions' || section.conditions) {
+        const conditions = section.conditions || [];
+        if (Array.isArray(conditions)) {
+            html += '<div class="conditions-container">';
+            html += '<div class="conditions-list">';
+
+            conditions.forEach(condition => {
+                html += `
+                    <div class="condition-item">
+                        <div class="condition-title">${condition.title || 'Condition'}</div>
+                        ${condition.description ? `<div class="condition-description">${condition.description}</div>` : ''}
+                    </div>
+                `;
+            });
+
+            html += '</div>'; // Close conditions-list
+            html += '</div>'; // Close conditions-container
+        }
+    }
+
+    // Special handling for procedures
+    if (sectionKey === 'requested_procedure' || section.procedures) {
+        const procedures = section.procedures || [];
+        if (Array.isArray(procedures)) {
+            html += '<div class="procedures-container">';
+            html += '<div class="procedures-list">';
+
+            procedures.forEach(procedure => {
+                html += `
+                    <div class="procedure-item">
+                        <span class="procedure-name">${procedure.name || 'Procedure'}</span>
+                        ${procedure.cpt_code ? `<span class="procedure-code">CPT: ${procedure.cpt_code}</span>` : ''}
+                    </div>
+                `;
+            });
+
+            html += '</div>'; // Close procedures-list
+            html += '</div>'; // Close procedures-container
+        }
+    }
+
+    // Generic handling for properties not covered by specifics above
+    for (const key in section) {
+        if (key !== 'fields' && key !== 'subsections' && key !== 'title' &&
+            key !== 'style' && key !== 'medications' && key !== 'conditions' &&
+            key !== 'procedures' && typeof section[key] === 'object' &&
+            section[key] !== null) {
+
+            if (Array.isArray(section[key])) {
+                html += processArrayProperty(key, section[key]);
             } else {
-                html += `<li>${item}</li>`;
+                html += processObjectProperty(key, section[key]);
             }
-        });
-
-        html += '</ul>';
-        html += '</div>';
+        }
     }
 
     return html;
 }
 
 /**
- * Process enhanced note array (existing function, kept for compatibility)
+ * Process an array section
  */
-function processEnhancedNoteArray(notesArray, selectedSectionsArray) {
+function processArraySection(array, sectionKey) {
     let html = '';
 
-    // Process each item in the array as a section
-    notesArray.forEach((item, index) => {
-        const sectionKey = `item-${index}`;
-        const sectionTitle = item.title || `Section ${index + 1}`;
+    // Detect array type based on first item structure or section key
+    if (array.length > 0) {
+        if (sectionKey === 'medications' ||
+            (typeof array[0] === 'object' && array[0] !== null &&
+                (array[0].name !== undefined && array[0].dosage !== undefined))) {
+            // Process as medications
+            html += '<div class="medications-container">';
+            html += '<div class="medications-list">';
 
-        html += `
-            <div class="section-panel" id="section-${sectionKey}">
-                <div class="section-header">
-                    <div class="section-checkbox-container">
-                        <input type="checkbox" id="section-checkbox-${sectionKey}" 
-                            class="section-checkbox" data-section="${sectionKey}" checked>
-                        <label for="section-checkbox-${sectionKey}">${sectionTitle}</label>
+            array.forEach(medication => {
+                if (medication.name !== "Unavailable") {
+                    html += `
+                        <div class="medication-item">
+                            <div class="medication-header">
+                                <strong>${medication.name}</strong> - ${medication.dosage || ''}
+                            </div>
+                            <div class="medication-details">
+                                ${medication.frequency || ''}
+                                ${medication.duration ? ` · Duration: ${medication.duration}` : ''}
+                                ${medication.medication_code ? ` · Code: ${medication.medication_code}` : ''}
+                            </div>
+                            ${medication.description ? `<div class="medication-description">${medication.description}</div>` : ''}
+                        </div>
+                    `;
+                }
+            });
+
+            html += '</div>'; // Close medications-list
+            html += '</div>'; // Close medications-container
+        }
+        else if (sectionKey === 'other_conditions' ||
+            (typeof array[0] === 'object' && array[0] !== null &&
+                (array[0].title !== undefined && array[0].description !== undefined))) {
+            // Process as conditions
+            html += '<div class="conditions-container">';
+            html += '<div class="conditions-list">';
+
+            array.forEach(condition => {
+                html += `
+                    <div class="condition-item">
+                        <div class="condition-title">${condition.title || 'Condition'}</div>
+                        ${condition.description ? `<div class="condition-description">${condition.description}</div>` : ''}
                     </div>
-                    <span class="section-toggle">▼</span>
-                </div>
-                <div class="section-content">
-        `;
+                `;
+            });
 
-        // Process based on type
-        if (typeof item === 'object' && item !== null) {
-            html += processObjectSection(item, sectionKey);
-        } else {
-            html += `<div class="section-simple-value">${item}</div>`;
+            html += '</div>'; // Close conditions-list
+            html += '</div>'; // Close conditions-container
         }
+        else if (sectionKey === 'requested_procedure' ||
+            (typeof array[0] === 'object' && array[0] !== null &&
+                (array[0].name !== undefined && array[0].cpt_code !== undefined))) {
+            // Process as procedures
+            html += '<div class="procedures-container">';
+            html += '<div class="procedures-list">';
 
-        html += `
-                </div>
-            </div>
-        `;
+            array.forEach(procedure => {
+                html += `
+                    <div class="procedure-item">
+                        <span class="procedure-name">${procedure.name || 'Procedure'}</span>
+                        ${procedure.cpt_code ? `<span class="procedure-code">CPT: ${procedure.cpt_code}</span>` : ''}
+                    </div>
+                `;
+            });
 
-        // Add to selected sections by default
-        if (!selectedSectionsArray.includes(sectionKey)) {
-            selectedSectionsArray.push(sectionKey);
+            html += '</div>'; // Close procedures-list
+            html += '</div>'; // Close procedures-container
         }
-    });
+        else {
+            // Generic array handling
+            html += '<div class="generic-array-container">';
+            html += `<h4 class="array-title">${formatSectionName(sectionKey)}:</h4>`;
+            html += '<ul class="generic-array-list">';
+
+            array.forEach(item => {
+                if (typeof item === 'object' && item !== null) {
+                    // Try to extract a name or title
+                    const label = item.name || item.title || item.description || JSON.stringify(item);
+                    html += `<li>${label}</li>`;
+                } else {
+                    html += `<li>${item}</li>`;
+                }
+            });
+
+            html += '</ul>';
+            html += '</div>';
+        }
+    }
 
     return html;
 }
 
 /**
- * Process generic enhanced note (existing function, kept for compatibility)
+ * Process a generic array property
  */
-function processGenericEnhancedNote(noteObject, selectedSectionsArray) {
-    let html = '';
+function processArrayProperty(key, array) {
+    if (!array || !Array.isArray(array) || array.length === 0) {
+        return '';
+    }
 
-    // Process top-level properties as sections
-    Object.keys(noteObject).forEach(key => {
-        // Skip non-data properties
-        if (key === 'title' || key === 'style') {
-            return;
-        }
+    let html = `<div class="array-property">`;
+    html += `<h4>${formatFieldName(key)}:</h4>`;
+    html += `<ul class="array-property-list">`;
 
-        const value = noteObject[key];
-        const sectionKey = key;
-        const sectionTitle = formatSectionName(key);
-
-        html += `
-            <div class="section-panel" id="section-${sectionKey}">
-                <div class="section-header">
-                    <div class="section-checkbox-container">
-                        <input type="checkbox" id="section-checkbox-${sectionKey}" 
-                            class="section-checkbox" data-section="${sectionKey}" checked>
-                        <label for="section-checkbox-${sectionKey}">${sectionTitle}</label>
-                    </div>
-                    <span class="section-toggle">▼</span>
-                </div>
-                <div class="section-content">
-        `;
-
-        // Process based on type
-        if (typeof value === 'object' && value !== null) {
-            if (Array.isArray(value)) {
-                html += processArraySection(value, sectionKey);
-            } else {
-                html += processObjectSection(value, sectionKey);
-            }
+    array.forEach(item => {
+        if (typeof item === 'object' && item !== null) {
+            // Try to extract a meaningful property
+            const displayValue = item.name || item.title || item.description ||
+                item.value || JSON.stringify(item);
+            html += `<li>${displayValue}</li>`;
         } else {
-            html += `<div class="section-simple-value">${value}</div>`;
-        }
-
-        html += `
-                </div>
-            </div>
-        `;
-
-        // Add to selected sections by default
-        if (!selectedSectionsArray.includes(sectionKey)) {
-            selectedSectionsArray.push(sectionKey);
+            html += `<li>${item}</li>`;
         }
     });
+
+    html += `</ul>`;
+    html += `</div>`;
+
+    return html;
+}
+
+/**
+ * Process a generic object property
+ */
+function processObjectProperty(key, obj) {
+    if (!obj || typeof obj !== 'object') {
+        return '';
+    }
+
+    let html = `<div class="object-property">`;
+    html += `<h4>${formatFieldName(key)}:</h4>`;
+    html += `<div class="object-property-content">`;
+
+    // Process simple properties
+    for (const propKey in obj) {
+        if (typeof obj[propKey] !== 'object') {
+            html += `
+                <div class="field-item">
+                    <span class="field-name">${formatFieldName(propKey)}:</span>
+                    <span class="field-value">${obj[propKey]}</span>
+                </div>
+            `;
+        }
+    }
+
+    html += `</div>`;
+    html += `</div>`;
 
     return html;
 }
@@ -1398,7 +1343,40 @@ function deselectAllSections() {
     selectedSections = [];
     console.log('Deselected all sections');
 }
+// Create a selectable note element with checkbox
+function createSelectableNoteElement(note, index, section = null) {
+    const container = document.createElement('div');
+    container.className = 'enhanced-note-item';
 
+    let noteContent = '';
+    let noteId = `note-${index}`;
+
+    if (section) {
+        noteId = `note-${section}-${index}`;
+    }
+
+    // Handle different types of note content
+    if (typeof note === 'string') {
+        noteContent = note;
+    } else if (typeof note === 'object') {
+        noteContent = JSON.stringify(note, null, 2);
+    } else {
+        noteContent = String(note);
+    }
+
+    container.innerHTML = `
+        <div class="note-selection">
+            <input type="checkbox" id="${noteId}" class="enhanced-note-checkbox" 
+                   data-index="${index}" data-section="${section || ''}" checked>
+            <label for="${noteId}">Include in final documentation</label>
+        </div>
+        <div class="note-content">
+            <pre>${noteContent}</pre>
+        </div>
+    `;
+
+    return container;
+}
 // Approve selected sections
 function approveSelectedSections() {
     console.log('Approving sections:', selectedSections);
@@ -1448,7 +1426,6 @@ function approveSelectedSections() {
     }
 }
 
-// Rest of the existing functions remain the same...
 function enhanceClaimWithSelectionOptions(modalBody) {
     // Find the container with the claim data
     const claimContainer = modalBody.querySelector('.result-content');
@@ -1464,6 +1441,7 @@ function enhanceClaimWithSelectionOptions(modalBody) {
             console.error('Failed to parse claim data:', e);
             return;
         }
+
 
         // Clear the container
         claimContainer.innerHTML = '';
@@ -1491,42 +1469,6 @@ function enhanceClaimWithSelectionOptions(modalBody) {
         }
     }
 }
-
-// Create a selectable note element with checkbox
-function createSelectableNoteElement(note, index, section = null) {
-    const container = document.createElement('div');
-    container.className = 'enhanced-note-item';
-
-    let noteContent = '';
-    let noteId = `note-${index}`;
-
-    if (section) {
-        noteId = `note-${section}-${index}`;
-    }
-
-    // Handle different types of note content
-    if (typeof note === 'string') {
-        noteContent = note;
-    } else if (typeof note === 'object') {
-        noteContent = JSON.stringify(note, null, 2);
-    } else {
-        noteContent = String(note);
-    }
-
-    container.innerHTML = `
-        <div class="note-selection">
-            <input type="checkbox" id="${noteId}" class="enhanced-note-checkbox" 
-                   data-index="${index}" data-section="${section || ''}" checked>
-            <label for="${noteId}">Include in final documentation</label>
-        </div>
-        <div class="note-content">
-            <pre>${noteContent}</pre>
-        </div>
-    `;
-
-    return container;
-}
-
 // Create a selectable diagnosis element with checkbox
 function createSelectableDiagnosisElement(diagnosis, index) {
     const container = document.createElement('div');
@@ -1821,7 +1763,190 @@ function formatReviewResults(containerId) {
     });
 }
 
-// Loading indicator management
+// Function to forcibly hide the loading indicator
+//window.forceHideLoadingIndicator = function () {
+//    // Direct DOM manipulation to hide the loading indicator
+//    var loadingIndicator = document.getElementById('loadingIndicator');
+//    if (loadingIndicator) {
+//        loadingIndicator.style.display = 'none';
+//    }
+
+//    // Use a failsafe timer to ensure it stays hidden
+//    //setTimeout(function () {
+//    //    var loadingIndicator = document.getElementById('loadingIndicator');
+//    //    if (loadingIndicator) {
+//    //        loadingIndicator.style.display = 'none';
+//    //    }
+//    //}, 500);
+//};
+function determineFeedbackResultClass(resultText) {
+    if (!resultText) return 'result-neutral';
+
+    const lowerResult = resultText.toLowerCase();
+
+    // Check for negative results that should be displayed in red
+    if (lowerResult.includes('inconsistent') ||
+        lowerResult.includes('irrelevant') ||
+        lowerResult.includes('not applicable') ||
+        lowerResult.includes('gap detected') ||
+        lowerResult.includes('non-compliant') ||
+        lowerResult.includes('unnecessary') ||
+        lowerResult.includes('incomplete')) {
+        return 'result-negative';
+    }
+
+    // Check for positive results
+    if (lowerResult.includes('consistent') ||
+        lowerResult.includes('relevant') ||
+        lowerResult.includes('applicable') ||
+        lowerResult.includes('complete') ||
+        lowerResult.includes('compliant') ||
+        lowerResult.includes('necessary')) {
+        return 'result-positive';
+    }
+
+    // Default to neutral
+    return 'result-neutral';
+}
+
+// Use this function when formatting review results
+function formatFeedbackResult(result) {
+    const resultClass = determineFeedbackResultClass(result);
+    return `<div class="feedback-result ${resultClass}">${result}</div>`;
+}
+
+// Enhanced function to process review categories with better status handling
+function processReviewCategory(category) {
+    let html = '';
+
+    // Format category name for display
+    const displayName = formatCategoryName(category.Category || "Unknown Category");
+
+    // Determine status class - use our enhanced function
+    const statusClass = determineStatusClass(category.Status);
+
+    // Create formatted HTML with category header and content
+    html += `<div class="category-header">
+        <span class="category-title">${displayName}</span>
+        <span class="expand-icon">▼</span>
+    </div>
+    <div class="category-content">`;
+
+    if (category.Status) {
+        html += `<div class="status-badge ${statusClass}">${category.Status}</div>`;
+    }
+
+    if (category.Reason) {
+        html += `<div class="section-reasoning">${category.Reason}</div>`;
+    }
+
+    // Parse and display feedback
+    if (category.Feedback) {
+        try {
+            const feedbackObj = JSON.parse(category.Feedback);
+            html += `<div class="feedback-container">`;
+
+            // Process each feedback step
+            for (const stepKey in feedbackObj) {
+                const step = feedbackObj[stepKey];
+                html += `<div class="feedback-step">
+                    <h4>${formatStepName(stepKey)}</h4>`;
+
+                // Process each category in the step
+                for (const categoryKey in step) {
+                    const feedbackCategory = step[categoryKey];
+                    html += `<div class="feedback-category">
+                        <h5>${formatCategoryName(categoryKey)}</h5>`;
+
+                    // Apply proper styling to results based on content
+                    if (feedbackCategory.result) {
+                        const resultClass = determineFeedbackResultClass(feedbackCategory.result);
+                        html += `<div class="feedback-result ${resultClass}">
+                            <strong>Result:</strong> ${feedbackCategory.result}</div>`;
+                    }
+
+                    if (feedbackCategory.reasoning) {
+                        html += `<div class="feedback-reasoning">
+                            <strong>Reasoning:</strong> ${feedbackCategory.reasoning}</div>`;
+                    }
+
+                    html += `</div>`; // Close feedback-category
+                }
+
+                html += `</div>`; // Close feedback-step
+            }
+
+            html += `</div>`; // Close feedback-container
+        } catch (e) {
+            console.error("Error parsing feedback JSON:", e);
+            html += `<div class="section-error">Could not parse detailed feedback information.</div>`;
+        }
+    }
+
+    html += `</div>`; // Close category-content
+    return html;
+}
+
+// Helper function to determine status class
+function determineStatusClass(status) {
+    if (!status) return 'status-neutral';
+
+    const lowerStatus = status.toLowerCase();
+
+    // Check for negative statuses
+    if (lowerStatus.includes('inconsistent') ||
+        lowerStatus.includes('irrelevant') ||
+        lowerStatus.includes('not applicable') ||
+        lowerStatus.includes('gap detected') ||
+        lowerStatus.includes('non-compliant') ||
+        lowerStatus.includes('unnecessary') ||
+        lowerStatus.includes('incomplete')) {
+        return 'status-inconsistent';
+    }
+
+    // Check for positive statuses
+    if (lowerStatus.includes('consistent') ||
+        lowerStatus.includes('relevant') ||
+        lowerStatus.includes('applicable') ||
+        lowerStatus.includes('complete') ||
+        lowerStatus.includes('compliant') ||
+        lowerStatus.includes('necessary')) {
+        return 'status-consistent';
+    }
+
+    return 'status-neutral';
+}
+
+// Helper function to format category names
+function formatCategoryName(name) {
+    if (!name) return "Unknown";
+
+    // Remove numbering prefix if present
+    if (name.includes("_") && /^\d+_/.test(name)) {
+        name = name.substring(name.indexOf('_') + 1);
+    }
+
+    // Replace underscores with spaces
+    name = name.replace(/_/g, ' ');
+
+    // Title case the name
+    return name.replace(/\w\S*/g, function (txt) {
+        return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
+    });
+}
+
+// Helper function to format step names
+function formatStepName(name) {
+    if (!name) return "Unknown";
+
+    // Replace underscores with spaces
+    name = name.replace(/_/g, ' ');
+
+    // Title case the name
+    return name.replace(/\w\S*/g, function (txt) {
+        return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
+    });
+}
 window.forceHideLoadingIndicator = function () {
     console.log("Force hiding loading indicator");
 
@@ -1853,6 +1978,24 @@ window.forceHideLoadingIndicator = function () {
     }, 500);
 };
 
+// Call the server to enhance notes
+window.enhanceReviewedNotes = function () {
+    // Trigger the server-side enhance button
+    const enhanceButton = document.getElementById('btnEnhanceNotes');
+    if (enhanceButton) {
+        enhanceButton.click();
+    }
+};
+
+// Call the server to generate a claim from enhanced notes
+window.generateClaimFromEnhanced = function () {
+    // Trigger the server-side generate claim button
+    const generateClaimButton = document.getElementById('btnGenerateClaimFromNotes');
+    if (generateClaimButton) {
+        generateClaimButton.click();
+    }
+};
+
 // Expose the functions globally for ASP.NET buttons
 window.showReviewResultsModal = function () {
     // Hide the loading indicator if it's still showing
@@ -1860,6 +2003,10 @@ window.showReviewResultsModal = function () {
     if (loadingIndicator) {
         loadingIndicator.style.display = 'none';
     }
+    //showModal('pnlReviewResults');
+
+    // Force hide the loading indicator
+    //window.forceHideLoadingIndicator();
 
     // Show the modal
     showModal('pnlReviewResults');
@@ -1867,6 +2014,8 @@ window.showReviewResultsModal = function () {
     // Add a backup timer to hide the indicator again after the modal is shown
     setTimeout(window.forceHideLoadingIndicator, 1000);
 };
+
+
 
 // Store and retrieve Request ID between operations
 window.setCurrentRequestId = function (requestId) {
@@ -1911,6 +2060,18 @@ window.getCurrentRequestId = function () {
     }
 
     return requestId;
+};
+
+window.logDebug = function (message) {
+    console.log("[ClaimKit Debug] " + message);
+
+    // Optional: Log to a visible debug panel if you add one to your UI
+    var debugPanel = document.getElementById('debugPanel');
+    if (debugPanel) {
+        var entry = document.createElement('div');
+        entry.textContent = new Date().toISOString() + ": " + message;
+        debugPanel.appendChild(entry);
+    }
 };
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -1964,6 +2125,16 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    // Add a safety timeout to hide the loading indicator if it stays visible too long
+    window.setForceHideLoadingTimeout = function () {
+        window.setTimeout(function () {
+            if (window.loadingIndicator.isVisible()) {
+                console.log('Force hiding loading indicator after timeout');
+                window.loadingIndicator.hide();
+            }
+        }, 10000); // 10 seconds safety timeout
+    };
+
     // Override the server endpoint callback functions
     var originalShowReviewResultsModal = window.showReviewResultsModal;
     window.showReviewResultsModal = function () {
@@ -1973,6 +2144,18 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     };
 
+    //var originalShowGeneratedClaimModal = window.showGeneratedClaimModal;
+    //window.showGeneratedClaimModal = function () {
+    //    window.loadingIndicator.hide();
+    //    if (typeof originalShowGeneratedClaimModal === 'function') {
+    //        originalShowGeneratedClaimModal();
+    //    }
+    //};
+    //window.showGeneratedClaimModal = function () {
+    //    // Reset selections when opening
+    //    modalState.selectedDiagnoses = [];
+    //    showModal('pnlGeneratedClaim');
+    //};
     var originalShowEnhancedNotesModal = window.showEnhancedNotesModal;
     window.showEnhancedNotesModal = function () {
         window.loadingIndicator.hide();
@@ -1980,7 +2163,18 @@ document.addEventListener('DOMContentLoaded', function () {
             originalShowEnhancedNotesModal();
         }
     };
+    window.showGeneratedClaimModal = function () {
+        console.log("showGeneratedClaimModal called");
 
+        // Hide loading indicator
+        //var loadingIndicator = document.getElementById('loadingIndicator');
+        //if (loadingIndicator) {
+        //    loadingIndicator.style.display = 'none';
+        //}
+        modalState.selectedDiagnoses = [];
+        // Show the modal
+        showModal('pnlGeneratedClaim');
+    };
     // Force hide the loading indicator on page load, just in case
     window.loadingIndicator.hide();
 });

@@ -11,8 +11,8 @@
     <ProjectTypeGuids>{349c5851-65df-11da-9384-00065b846f21};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>ClaimKit_v1</RootNamespace>
-    <AssemblyName>ClaimKit_v1</AssemblyName>
+    <RootNamespace>ClaimKitv1</RootNamespace>
+    <AssemblyName>ClaimKitv1</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <UseIISExpress>true</UseIISExpress>
     <Use64BitIISExpress />
@@ -70,23 +70,21 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Content\css\themes\compact-ui.css" />
+    <Content Include="Content\css\themes\modern-ui.css" />
     <Content Include="Content\css\styles.css" />
+    <Content Include="Content\css\themes\classic-ui.css" />
+    <Content Include="Content\js\claimkit-modal - Copy.js" />
     <Content Include="Content\js\claimkit.js" />
     <Content Include="Content\js\claimkit-modal.js" />
-    <Content Include="Default1.aspx" />
+    <Content Include="Content\js\modal-theme-support.js" />
+    <Content Include="Content\js\ui-theme-switcher.js" />
     <Content Include="Default.aspx" />
     <Content Include="Global.asax" />
     <Content Include="Web.config" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App_Start\RouteConfig.cs" />
-    <Compile Include="Default1.aspx.cs">
-      <DependentUpon>Default1.aspx</DependentUpon>
-      <SubType>ASPXCodeBehind</SubType>
-    </Compile>
-    <Compile Include="Default1.aspx.designer.cs">
-      <DependentUpon>Default1.aspx</DependentUpon>
-    </Compile>
     <Compile Include="Default.aspx.cs">
       <DependentUpon>Default.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
@@ -97,24 +95,77 @@
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
-    <Compile Include="Helpers\EnhancedNotesFormater.cs" />
+    <Compile Include="Helpers\EmrDataProcessorOld.cs" />
+    <Compile Include="Models\DoctorInfo.cs" />
+    <Compile Include="Models\EMR\EmrIntegrationResult.cs" />
+    <Compile Include="Models\EMR\ClaimKitEmrMapping.cs" />
+    <Compile Include="Helpers\EmrDataProcessor.cs" />
+    <Compile Include="Models\EmrFormData.cs" />
+    <Compile Include="Helpers\EnhancedNotesFormatter.cs" />
+    <Compile Include="Models\DoctorNotesEnhanceRequest.cs" />
+    <Compile Include="Models\FeedbackDetail.cs" />
+    <Compile Include="Models\FormData.cs" />
+    <Compile Include="Models\FormDataModels.cs" />
+    <Compile Include="Models\NotesProcessingModels.cs" />
+    <Compile Include="Helpers\IWorkflowManager.cs" />
+    <Compile Include="Helpers\WorkflowManager.cs" />
     <Compile Include="Models\ApiResponse.cs" />
+    <Compile Include="Helpers\ClaimKitConstants.cs" />
+    <Compile Include="Models\EMR\EmrDataRequest.cs" />
+    <Compile Include="Models\EMR\PatientOrder.cs" />
+    <Compile Include="Models\EMR\PatientPrescription.cs" />
+    <Compile Include="Models\EMR\PatientDemographic.cs" />
+    <Compile Include="Models\EMR\PatientEmrData.cs" />
+    <Compile Include="Models\EMR\PatientHistoryItem.cs" />
+    <Compile Include="Models\EMR\PatientProblem.cs" />
+    <Compile Include="Models\EMR\PatientTemplateData.cs" />
+    <Compile Include="Models\EMR\PatientVital.cs" />
     <Compile Include="Models\EnhanceRequest.cs" />
     <Compile Include="Models\GenerateClaimRequest.cs" />
     <Compile Include="Models\PatientHistoryEntry.cs" />
     <Compile Include="Models\Responses\BaseResponse.cs" />
+    <Compile Include="Models\Responses\DoctorNotesEnhanceResponse.cs" />
+    <Compile Include="Models\Responses\DoctorResponseInfo.cs" />
     <Compile Include="Models\Responses\EnhancedData.cs" />
+    <Compile Include="Models\Responses\EnhanceOutput.cs" />
     <Compile Include="Models\Responses\EnhanceResponse.cs" />
+    <Compile Include="Models\Responses\EnhanceResult.cs" />
     <Compile Include="Models\Responses\GenerateClaimResponse.cs" />
     <Compile Include="Models\Responses\GeneratedClaimData.cs" />
+    <Compile Include="Models\Responses\HospitalInfo.cs" />
+    <Compile Include="Models\Responses\MessageInfo.cs" />
+    <Compile Include="Models\Responses\NewEnhanceData.cs" />
     <Compile Include="Models\Responses\ReviewCategory.cs" />
+    <Compile Include="Models\Responses\DoctorNotesReviewResponse.cs" />
     <Compile Include="Models\Responses\ReviewResponse.cs" />
+    <Compile Include="Models\DoctorNotesReviewRequest.cs" />
+    <Compile Include="Models\Responses\TokenUsage.cs" />
+    <Compile Include="Models\ReviewData.cs" />
+    <Compile Include="Models\ReviewFeedbackItem.cs" />
+    <Compile Include="Models\ReviewOutput.cs" />
     <Compile Include="Models\ReviewRequest.cs" />
+    <Compile Include="Models\ReviewResult.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Services\EmrIntegrationService.cs" />
     <Compile Include="Services\ClaimKitApiService.cs" />
+    <Compile Include="Services\EmrApiService.cs" />
     <Compile Include="Services\ConfigurationService.cs" />
-    <Compile Include="Services\IClaimKitApiService.cs" />
+    <Compile Include="Services\FormDataService.cs" />
+    <Compile Include="Services\Interfaces\IClaimKitApiService.cs" />
+    <Compile Include="Services\Interfaces\IEmrIntegrationService.cs" />
+    <Compile Include="Services\Interfaces\IEmrApiService.cs" />
+    <Compile Include="Services\Interfaces\IFormDataService.cs" />
+    <Compile Include="Services\Interfaces\INotesProcessingService.cs" />
+    <Compile Include="Services\Interfaces\IUiManager.cs" />
+    <Compile Include="Services\Interfaces\IValidationService.cs" />
     <Compile Include="Services\LoggingService.cs" />
+    <Compile Include="Services\NotesProcessingService.cs" />
+    <Compile Include="Services\PerformanceOperation.cs" />
+    <Compile Include="Services\PerformanceTracker.cs" />
+    <Compile Include="Services\UiManager.cs" />
+    <Compile Include="Services\ValidationResult.cs" />
+    <Compile Include="Services\ValidationService.cs" />
+    <Compile Include="UiManagerBase.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

@@ -1,0 +1,483 @@
+﻿/* Base styles for compact interface - NO SCROLLING, GRID LAYOUT */
+.compact-ui .modal-content {
+    max-width: 98vw; /* Nearly full width */
+    max-height: none !important; /* No height restriction */
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border: none;
+    overflow: visible !important; /* NEVER SCROLL */
+}
+
+.compact-ui .modal-header {
+    background-color: #447607; /* Dark header */
+    border-bottom: 1px solid #2D3748;
+    padding: 8px 15px;
+    color: white;
+}
+
+.compact-ui .modal-title {
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.compact-ui .close {
+    color: white;
+    opacity: 0.8;
+    font-size: 1.2rem;
+}
+
+/* Complete removal of overflow and scrolling */
+.compact-ui .modal-body {
+    padding: 0;
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+/* Grid layout for review items - more columns for compact */
+.compact-ui .categories-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 8px;
+    padding: 15px;
+    overflow: visible !important;
+}
+
+/* Adjustments for category items in grid */
+.compact-ui .category-item {
+    background-color: #fff;
+    border-radius: 4px;
+    border: 1px solid #E2E8F0;
+    overflow: visible;
+    height: auto;
+    margin-bottom: 0; /* Remove margin since grid handles spacing */
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.compact-ui .category-header {
+    padding: 8px 12px;
+    background-color: #08c332; /* Light teal */
+    border-bottom: 1px solid #000401;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 4px 4px 0 0;
+}
+
+.compact-ui .category-title {
+    color: #ffffff; /* Dark teal */
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.compact-ui .category-content {
+    /* padding: 10px; */
+    font-size: 0.85rem;
+    line-height: 1.4;
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+/* Status badges - Teal theme */
+.compact-ui .status-badge {
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 3px;
+}
+
+.compact-ui .status-consistent,
+.compact-ui .status-necessary,
+.compact-ui .status-compliant {
+    background-color: #B2F5EA; /* Light teal */
+    color: #234E52;
+}
+
+.compact-ui .status-inconsistent,
+.compact-ui .status-unnecessary,
+.compact-ui .status-non-compliant {
+    background-color: #FEB2B2;
+    color: #9B2C2C;
+}
+
+.compact-ui .status-not-applicable,
+.compact-ui .status-neutral {
+    background-color: #E2E8F0;
+    color: #2D3748;
+}
+
+/* Review explanation top area - Teal theme */
+.compact-ui .review-explanation {
+    background-color: #b5edbd;
+    border-left: 3px solid #38B2AC;
+    margin: 0 20px 10px 20px;
+    padding: 15px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+
+.compact-ui .status-info {
+    margin: 0;
+    color: #38B2AC;
+    /* font-weight: 500; */
+    /* font-size: 0.85rem; */
+}
+
+.compact-ui .request-info {
+    margin: 0;
+    padding: 0;
+    color: #718096;
+    /* font-size: 0.8rem; */
+}
+
+.compact-ui h3 {
+    margin: 0 10px;
+    color: #234E52;
+    font-size: 1rem;
+}
+
+/* Footer and buttons */
+.compact-ui .modal-footer {
+    background-color: #1A202C;
+    border-top: 1px solid #2D3748;
+    padding: 8px 15px;
+}
+
+.compact-ui .btn-primary {
+    background-color: #38B2AC;
+    border-color: #38B2AC;
+    font-size: 0.85rem;
+    padding: 4px 12px;
+}
+
+    .compact-ui .btn-primary:hover {
+        background-color: #319795;
+        border-color: #319795;
+    }
+
+.compact-ui .btn-secondary {
+    background-color: #4A5568;
+    border-color: #4A5568;
+    color: #E2E8F0;
+    font-size: 0.85rem;
+    padding: 4px 12px;
+}
+
+    .compact-ui .btn-secondary:hover {
+        background-color: #2D3748;
+        border-color: #2D3748;
+    }
+
+/* Reasoning boxes - light teal */
+.compact-ui .reasoning {
+    background-color: #E6FFFA;
+    padding: 8px;
+    margin-top: 4px;
+    border-radius: 3px;
+    font-size: 0.8rem;
+}
+
+/* Diagnostic fields and sections */
+.compact-ui .diagnostic-section {
+    margin-bottom: 8px;
+    border-bottom: 1px solid #E2E8F0;
+    padding-bottom: 8px;
+}
+
+    .compact-ui .diagnostic-section:last-child {
+        margin-bottom: 0;
+        border-bottom: none;
+    }
+
+.compact-ui .section-label {
+    font-weight: 500;
+    color: #4A5568;
+    margin-bottom: 4px;
+    font-size: 0.8rem;
+}
+
+.compact-ui .section-result {
+    font-weight: 600;
+    margin-left: 10px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    display: inline-block;
+    font-size: 0.75rem;
+}
+
+.compact-ui .result-new,
+.compact-ui .result-relevant {
+    background-color: #C6F6D5;
+    color: #276749;
+}
+
+.compact-ui .result-inconsistent {
+    background-color: #FEB2B2;
+    color: #9B2C2C;
+}
+
+.compact-ui .result-necessary {
+    background-color: #B2F5EA;
+    color: #234E52;
+}
+
+/* Make all font sizes smaller for compact mode */
+.compact-ui {
+    /* font-size: 0.85rem; */
+}
+
+    .compact-ui p {
+        margin-bottom: 0.1rem;
+        font-size: 0.85rem;
+    }
+
+    .compact-ui .reasoning-text {
+        font-size: 0.8rem;
+    }
+
+    /* These important overrides ensure no scrolling happens */
+    .compact-ui .modal-content,
+    .compact-ui .modal-body,
+    .compact-ui .categories-container,
+    .compact-ui .category-content {
+        /* overflow: visible !important; */
+        /* max-height: none !important; */
+    }
+
+.categories-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    /* margin-top: 20px; */
+}
+
+.category-item {
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    /* padding: 16px; */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid #eaeaea;
+    margin-bottom: 15px;
+}
+
+.category-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+    cursor: pointer;
+    padding: 8px 0;
+}
+
+.review-explanation {
+    background-color: #f8f9fa;
+    /* padding: 15px; */
+    border-radius: 8px;
+    /* margin-bottom: 20px; */
+    border-left: 4px solid #0056b3;
+}
+
+.status-info {
+    margin-bottom: 10px;
+    /* font-weight: 500; */
+}
+
+.request-info {
+    color: #6c757d;
+    /* font-size: 0.9rem; */
+}
+
+/* Feedback display */
+.feedback-container {
+    /* margin-top: 15px; */
+    background-color: #f9f9f9;
+    border-radius: 5px;
+    padding: 0 5px;
+    border-left: 3px solid #8cb107;
+}
+
+.feedback-step {
+    /* margin-bottom: 15px; */
+}
+
+    .feedback-step h4 {
+        margin: 0;
+        /* padding-bottom: 5px; */
+        border-bottom: 1px solid #ddd;
+        color: #2c3e50;
+        font-weight: 600;
+    }
+
+.feedback-category {
+    /* margin: 0 0 12px 10px; */
+    /* padding-left: 10px; */
+    /* border-left: 2px solid #e0e0e0; */
+}
+
+.feedback-result {
+    /* margin: 5px 0 5px 10px; */
+    /* padding: 5px 8px; */
+    border-radius: 4px;
+    display: inline-block;
+}
+
+.feedback-reasoning {
+    /* margin: 5px 0 5px 10px; */
+    line-height: 1.4;
+}
+
+.medication-details,
+.procedure-code {
+    /* font-size: 0.875rem; */
+    color: #6c757d;
+}
+
+.medication-description,
+.condition-description {
+    margin-top: 0.25rem;
+    /* font-size: 0.875rem; */
+    font-style: italic;
+}
+
+.section-content {
+    padding: 5px;
+    background-color: #fff;
+    max-height: 500px;
+    overflow-y: auto;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+}
+
+    .section-content.collapsed {
+        max-height: 0;
+        padding: 0 15px;
+        overflow: hidden;
+    }
+
+.section-fields {
+    /* display: grid; */
+    /* grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); */
+    /* gap: 0.5rem; */
+    /* margin-bottom: 15px; */
+}
+
+.field-item {
+    /* padding: 0.25rem; */
+}
+
+.field-name {
+    /* font-weight: 500; */
+    /* margin-right: 0.25rem; */
+    color: #4a5568;
+}
+
+.field-value {
+    color: #2c3e50;
+}
+
+/* Subsections */
+.subsections-container {
+    margin-top: 0.75rem;
+}
+
+.subsection {
+    margin-bottom: 0.75rem;
+    padding: 10px;
+    background-color: #f9f9f9;
+    border-radius: 4px;
+}
+
+    .subsection h4 {
+        /* font-size: 1rem; */
+        margin: 0 0 10px 0;
+        color: #495057;
+        border-bottom: 1px solid #ddd;
+        padding-bottom: 5px;
+    }
+
+.enhanced-notes-container {
+    font-family: Arial, sans-serif;
+    /* padding: 10px; */
+    /* margin-bottom: 20px; */
+}
+
+.notes-explanation {
+    background-color: #e6f3ff;
+    border-radius: 8px;
+    /* padding: 15px; */
+    /* margin-bottom: 20px; */
+    border-left: 4px solid #0056b3;
+}
+
+.sections-container {
+    /* margin: 15px 0; */
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+}
+
+/* Section panel styling */
+.section-panel {
+    /* margin-bottom: 15px; */
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+    transition: box-shadow 0.3s ease;
+}
+
+.medication-details,
+.procedure-code {
+    /* font-size: 0.875rem; */
+    color: #6c757d;
+}
+
+.medication-description,
+.condition-description {
+    margin-top: 0.25rem;
+    /* font-size: 0.875rem; */
+    font-style: italic;
+}
+
+.subsection {
+    margin-bottom: 0.75rem;
+    padding: 10px;
+    background-color: #f9f9f9;
+    border-radius: 4px;
+}
+
+    .subsection h4 {
+        /* font-size: 1rem; */
+        margin: 0 0 10px 0;
+        color: #495057;
+        border-bottom: 1px solid #ddd;
+        padding-bottom: 5px;
+    }
+.section-content {
+    padding: 5px;
+    background-color: #fff;
+    max-height: 500px;
+    overflow-y: auto;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+}
+
+    .section-content.collapsed {
+        max-height: 0;
+        padding: 0 15px;
+        overflow: hidden;
+    }
+
+.section-fields {
+    /* display: grid; */
+    /* grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); */
+    /* gap: 0.5rem; */
+    /* margin-bottom: 15px; */
+}
+
+.field-item {
+    /* padding: 0.25rem; */
+}
+
+.field-name {
+    /* font-weight: 500; */
+    /* margin-right: 0.25rem; */
+    color: #4a5568;
+}

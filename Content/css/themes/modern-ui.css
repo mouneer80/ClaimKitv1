@@ -1,0 +1,331 @@
+﻿/* ClaimKit - Modern UI Theme (REVISED) */
+
+/* Base styles for modern interface - NO SCROLLING, GRID LAYOUT */
+.modern-ui .modal-content {
+    max-width: 98vw; /* Nearly full width */
+    max-height: none !important; /* No height restriction */
+    border-radius: 10px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    border: none;
+    overflow: visible !important; /* NEVER SCROLL */
+}
+
+.modern-ui .modal-header {
+    background-color: #3182ce; /* Blue header */
+    border-bottom: 1px solid #2b6cb0;
+    padding: 12px 20px;
+    color: white;
+}
+
+.modern-ui .modal-title {
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 1.3rem;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.2);
+}
+
+.modern-ui .close {
+    color: white;
+    opacity: 0.9;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.3);
+}
+
+/* Complete removal of overflow and scrolling */
+.modern-ui .modal-body {
+    padding: 0;
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+/* Grid layout for review items */
+.modern-ui .categories-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 15px;
+    padding: 10px;
+    overflow: visible !important;
+}
+
+/* Adjustments for category items in grid */
+.modern-ui .category-item {
+    background-color: #fff;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    overflow: visible;
+    height: auto;
+    margin-bottom: 0; /* Remove margin since grid handles spacing */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.modern-ui .category-header {
+    padding: 10px 15px;
+    background-color: #dadada; /* Light blue */
+    border-bottom: 3px solid #ffc100;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 8px 8px 0 0;
+}
+
+.modern-ui .category-title {
+    color: #000000;
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.modern-ui .category-content {
+    padding: 5px;
+    font-size: 0.9rem;
+    line-height: 1.2;
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+/* Status badges - Blue theme */
+.modern-ui .status-badge {
+    font-size: 0.75rem;
+    padding: 3px 8px;
+    border-radius: 20px;
+}
+
+.modern-ui .status-consistent,
+.modern-ui .status-necessary,
+.modern-ui .status-compliant {
+    background-color: #90cdf4;
+    color: #2c5282;
+}
+
+.modern-ui .status-inconsistent,
+.modern-ui .status-unnecessary,
+.modern-ui .status-non-compliant {
+    background-color: #fed7d7;
+    color: #c53030;
+}
+
+.modern-ui .status-not-applicable,
+.modern-ui .status-neutral {
+    background-color: #e2e8f0;
+    color: #4a5568;
+}
+
+/* Review explanation top area - Blue theme */
+.modern-ui .review-explanation {
+    background-color: #f0f0f0;
+    border-left: 4px solid #3182ce;
+    margin: 0 20px 10px 20px;
+    padding: 15px;
+    border-radius: 6px;
+}
+
+.modern-ui .status-info {
+    /* margin: 0 20px; */
+    /* color: #3182ce; */
+    /* font-weight: 500; */
+}
+
+.modern-ui .request-info {
+    margin: 0;
+    color: #718096;
+}
+
+.modern-ui h3 {
+    margin: 0 20px;
+    color: #2c5282;
+    font-size: 1.2rem;
+}
+
+/* Footer and buttons */
+.modern-ui .modal-footer {
+    background-color: #f0f4f8;
+    border-top: 1px solid #e1e7ef;
+    padding: 12px 20px;
+}
+
+.modern-ui .btn-primary {
+    background-color: #3182ce;
+    border-color: #3182ce;
+}
+
+    .modern-ui .btn-primary:hover {
+        background-color: #2b6cb0;
+        border-color: #2b6cb0;
+    }
+
+.modern-ui .btn-secondary {
+    background-color: #edf2f7;
+    border-color: #e2e8f0;
+    color: #4a5568;
+}
+
+    .modern-ui .btn-secondary:hover {
+        background-color: #e2e8f0;
+        border-color: #cbd5e0;
+    }
+
+/* Reasoning boxes - light blue */
+.modern-ui .reasoning {
+    background-color: #f0f7ff;
+    padding: 10px;
+    margin-top: 5px;
+    border-radius: 5px;
+}
+
+/* Diagnostic fields and sections */
+.modern-ui .diagnostic-section {
+    margin-bottom: 10px;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 10px;
+}
+
+    .modern-ui .diagnostic-section:last-child {
+        margin-bottom: 0;
+        border-bottom: none;
+    }
+
+.modern-ui .section-label {
+    font-weight: 500;
+    color: #2c5282;
+    margin-bottom: 5px;
+}
+
+.modern-ui .section-result {
+    font-weight: 600;
+    margin-left: 15px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+.modern-ui .result-new,
+.modern-ui .result-relevant {
+    background-color: #c6f6d5;
+    color: #276749;
+}
+
+.modern-ui .result-inconsistent {
+    background-color: #fed7d7;
+    color: #c53030;
+}
+
+.modern-ui .result-necessary {
+    background-color: #bee3f8;
+    color: #2b6cb0;
+}
+
+/* These important overrides ensure no scrolling happens */
+.modern-ui .modal-content,
+.modern-ui .modal-body,
+.modern-ui .categories-container,
+.modern-ui .category-content {
+    overflow: visible !important;
+    max-height: none !important;
+}
+
+.sections-container {
+    margin: 15px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1rem;
+}
+
+/* Section panel styling */
+.section-panel {
+    /* margin-bottom: 15px; */
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+    transition: box-shadow 0.3s ease;
+}
+
+.medication-details,
+.procedure-code {
+    /* font-size: 0.875rem; */
+    color: #6c757d;
+}
+
+.medication-description,
+.condition-description {
+    margin-top: 0.25rem;
+    /* font-size: 0.875rem; */
+    font-style: italic;
+}
+
+.subsection {
+    margin-bottom: 0.75rem;
+    padding: 10px;
+    background-color: #f9f9f9;
+    border-radius: 4px;
+}
+
+    .subsection h4 {
+        /* font-size: 1rem; */
+        margin: 0 0 10px 0;
+        color: #495057;
+        border-bottom: 1px solid #ddd;
+        padding-bottom: 5px;
+    }
+
+.section-content {
+    padding: 5px;
+    background-color: #fff;
+    max-height: 500px;
+    overflow-y: auto;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+}
+
+    .section-content.collapsed {
+        max-height: 0;
+        padding: 0 15px;
+        overflow: hidden;
+    }
+
+.section-fields {
+    /* display: grid; */
+    /* grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); */
+    /* gap: 0.5rem; */
+    /* margin-bottom: 15px; */
+}
+
+.field-item {
+    /* padding: 0.25rem; */
+}
+
+.field-name {
+    /* font-weight: 500; */
+    /* margin-right: 0.25rem; */
+    color: #4a5568;
+}
+
+/* Subsections */
+.subsections-container {
+    margin-top: 0.75rem;
+}
+
+.subsection {
+    margin-bottom: 0.75rem;
+    padding: 10px;
+    background-color: #f9f9f9;
+    border-radius: 4px;
+}
+
+    .subsection h4 {
+        /* font-size: 1rem; */
+        margin: 0 0 10px 0;
+        color: #495057;
+        border-bottom: 1px solid #ddd;
+        padding-bottom: 5px;
+    }
+
+.enhanced-notes-container {
+    font-family: Arial, sans-serif;
+    /* padding: 10px; */
+    /* margin-bottom: 20px; */
+}
+
+.notes-explanation {
+    background-color: #e6f3ff;
+    border-radius: 8px;
+    padding: 10px;
+    margin: 0 10px 0 20px;
+    border-left: 4px solid #0056b3;
+}

@@ -15,15 +15,22 @@ body {
 }
 
 .container {
-    max-width: 1140px;
+    max-width: 100%;
     margin: 0 auto;
-    padding: 20px;
+    padding: 10px;
 }
 
 h1, h2, h3, h4 {
-    margin-bottom: 1rem;
+    margin: 0;
 }
 
+h5 {
+    margin: 15px 0 5px 10px;
+}
+
+p {
+    margin: 0;
+}
 /* ==========================================================================
    Header
    ========================================================================== */
@@ -47,8 +54,8 @@ h1, h2, h3, h4 {
 .form-section {
     background-color: white;
     border-radius: 8px;
-    padding: 25px;
-    margin-bottom: 30px;
+    padding: 15px;
+    margin-bottom: 10px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
 }
 
@@ -57,19 +64,20 @@ h1, h2, h3, h4 {
 }
 
     .form-group label {
-        display: block;
+        display: inline-block;
         margin-bottom: 5px;
         font-weight: 600;
         color: #444;
+        font-size: small;
     }
 
 .form-control {
-    width: 100%;
+    /*width: 100%;*/
     padding: 8px 12px;
     border: 1px solid #ddd;
     border-radius: 4px;
     font-family: inherit;
-    font-size: 1rem;
+    font-size: small;
     line-height: 1.5;
     transition: border-color 0.15s ease-in-out;
 }
@@ -81,12 +89,13 @@ h1, h2, h3, h4 {
     }
 
 textarea.form-control {
-    height: 150px;
-    resize: vertical;
+    height: 50px;
+    resize: auto;
+    width: 80%
 }
 
 .final-notes-editor {
-    font-family: 'Consolas', 'Courier New', monospace;
+    /*font-family: 'Consolas', 'Courier New', monospace;*/
     line-height: 1.5;
     padding: 12px;
     font-size: 14px;
@@ -205,8 +214,8 @@ textarea.form-control {
     padding: 0;
     border-radius: 8px;
     box-shadow: 0 5px 25px rgba(0, 0, 0, 0.25);
-    width: 85%;
-    max-width: 1000px;
+    width: 100%;
+    max-width: 100%;
     max-height: 85vh;
     display: flex;
     flex-direction: column;
@@ -270,7 +279,7 @@ modal-body {
 }
 
 .close-modal {
-    color: #6c757d;
+    color: #ffffff;
     float: right;
     font-size: 24px;
     font-weight: bold;
@@ -340,12 +349,12 @@ modal-body {
     }
 
 .modal-btn-secondary {
-    background-color: #6c757d;
+    background-color: #0056b3;
     color: white;
 }
 
     .modal-btn-secondary:hover {
-        background-color: #5a6268;
+        background-color: #004494;
     }
 
 /* ==========================================================================
@@ -374,8 +383,46 @@ modal-body {
         margin-bottom: 20px;
     }
 
+.action-item {
+    padding: 0.5rem;
+    background: white;
+    border-radius: 0.25rem;
+    border-left: 3px solid #ffc107;
+    font-size: small;
+}
+
+.diagnosis-item {
+    padding: 0.5rem;
+    background: white;
+    border-radius: 0.25rem;
+    border-left: 3px solid #dc3545;
+    font-size: small;
+}
+
+.diagnosis-name {
+    font-weight: 600;
+    color: #495057;
+}
+
+.diagnosis-code {
+    /*font-size: 0.875rem;
+    color: #6c757d;
+    font-family: monospace;*/
+}
+
+.observation-item {
+    padding: 0.5rem;
+    background: white;
+    border-radius: 0.25rem;
+    border-left: 3px solid #28a745;
+    font-size: small;
+}
+
+.action-plan-list, .diagnosis-list, .observations-list {
+    space-y: 0.5rem;
+}
 .result-content {
-    font-family: 'Courier New', Courier, monospace;
+    /*font-family: 'Courier New', Courier, monospace;*/
     overflow-y: auto;
 }
 
@@ -406,35 +453,7 @@ modal-body {
 /* ==========================================================================
    Enhanced Notes Container
    ========================================================================== */
-.enhanced-notes-container {
-    font-family: Arial, sans-serif;
-    padding: 10px;
-    margin-bottom: 20px;
-}
 
-.notes-explanation {
-    background-color: #e6f3ff;
-    border-radius: 8px;
-    padding: 15px;
-    margin-bottom: 20px;
-    border-left: 4px solid #0056b3;
-}
-
-.sections-container {
-    margin: 15px 0;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-/* Section panel styling */
-.section-panel {
-    margin-bottom: 15px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    overflow: hidden;
-    transition: box-shadow 0.3s ease;
-}
 
     .section-panel.selected {
         border-color: #3498db;
@@ -467,36 +486,7 @@ modal-body {
     transition: transform 0.3s ease;
 }
 
-.section-content {
-    padding: 15px;
-    background-color: #fff;
-    max-height: 500px;
-    overflow-y: auto;
-    transition: max-height 0.3s ease, padding 0.3s ease;
-}
 
-    .section-content.collapsed {
-        max-height: 0;
-        padding: 0 15px;
-        overflow: hidden;
-    }
-
-.section-fields {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 0.5rem;
-    margin-bottom: 15px;
-}
-
-.field-item {
-    padding: 0.25rem;
-}
-
-.field-name {
-    font-weight: 500;
-    margin-right: 0.25rem;
-    color: #4a5568;
-}
 
 .field-value {
     color: #2c3e50;
@@ -507,20 +497,7 @@ modal-body {
     margin-top: 0.75rem;
 }
 
-.subsection {
-    margin-bottom: 0.75rem;
-    padding: 10px;
-    background-color: #f9f9f9;
-    border-radius: 4px;
-}
 
-    .subsection h4 {
-        font-size: 1rem;
-        margin: 0 0 10px 0;
-        color: #495057;
-        border-bottom: 1px solid #ddd;
-        padding-bottom: 5px;
-    }
 
 .items-list {
     list-style-type: disc;
@@ -533,7 +510,7 @@ modal-body {
     }
 
 .code {
-    font-family: monospace;
+    /*font-family: monospace;*/
     color: #6610f2;
 }
 
@@ -569,14 +546,14 @@ modal-body {
 .medications-container,
 .conditions-container,
 .procedures-container {
-    margin-top: 0.75rem;
+    margin-top: 0.15rem;
 }
 
 .medications-title,
 .conditions-title,
 .procedures-title {
     font-weight: 500;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.15rem;
 }
 
 .medications-list,
@@ -590,37 +567,26 @@ modal-body {
 .medication-item,
 .condition-item,
 .procedure-item {
-    padding: 0.5rem;
+    /*padding: 0.5rem;
     background-color: #f8f9fa;
-    border-radius: 0.25rem;
+    border-radius: 0.25rem;*/
 }
 
 .medication-header,
 .condition-title,
 .procedure-name {
-    font-weight: 500;
-    margin-bottom: 0.25rem;
+    /*font-weight: 500;
+    margin-bottom: 0.25rem;*/
 }
 
-.medication-details,
-.procedure-code {
-    font-size: 0.875rem;
-    color: #6c757d;
-}
 
-.medication-description,
-.condition-description {
-    margin-top: 0.25rem;
-    font-size: 0.875rem;
-    font-style: italic;
-}
 
 /* ==========================================================================
    Claim Container Styles
    ========================================================================== */
 .claim-container {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    max-width: 1000px;
+    /*font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;*/
+    max-width: 100%;
     margin: 0 auto;
     padding: 20px;
     background-color: #ffffff;
@@ -705,7 +671,7 @@ modal-body {
 
 .full-claim-pre {
     margin: 0;
-    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    /*font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;*/
     font-size: 12px;
     color: #4a5568;
     overflow-x: auto;
@@ -785,40 +751,6 @@ modal-body {
     background-color: #28a745;
 }
 
-/* ==========================================================================
-   Review Categories
-   ========================================================================== */
-.categories-container {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    margin-top: 20px;
-}
-
-.category-item {
-    background-color: #f9f9f9;
-    border-radius: 8px;
-    padding: 16px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    border: 1px solid #eaeaea;
-    margin-bottom: 15px;
-}
-
-.category-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-    cursor: pointer;
-    padding: 8px 0;
-}
-
-.category-title {
-    font-weight: 600;
-    color: #0056b3;
-    font-size: 1.15rem;
-}
-
 .category-content {
     font-size: 0.95rem;
     line-height: 1.6;
@@ -829,9 +761,9 @@ modal-body {
 }
 
 .expand-icon {
-    font-size: 1.2rem;
+    font-size: 0.7rem;
     transition: transform 0.3s;
-    color: #6c757d;
+    color: #ffffff;
 }
 
 .category-header.collapsed .expand-icon {
@@ -843,7 +775,7 @@ modal-body {
 }
 
 /* Result status colors */
-.result-positive {
+/*.result-positive {
     background-color: #e6f7e9;
     border-left: 3px solid #2ecc71;
 }
@@ -856,6 +788,68 @@ modal-body {
 .result-neutral {
     background-color: #f5f7fa;
     border-left: 3px solid #7f8c8d;
+}*/
+
+.result-negative,
+.result-inconsistent,
+.result-irrelevant,
+.result-not-applicable,
+.result-gap-detected,
+.result-non-compliant,
+.result-unnecessary {
+    background-color: #f8d7da;
+    color: #721c24;
+    border-left: 3px solid #dc3545;
+}
+
+.result-positive,
+.result-consistent,
+.result-relevant,
+.result-applicable,
+.result-complete,
+.result-compliant,
+.result-necessary {
+    background-color: #d4edda;
+    color: #155724;
+    border-left: 3px solid #28a745;
+}
+
+.result-neutral {
+    background-color: #f5f7fa;
+    border-left: 3px solid #7f8c8d;
+}
+
+.status-inconsistent,
+.status-irrelevant,
+.status-not-applicable,
+.status-gap-detected,
+.status-non-compliant,
+.status-unnecessary {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+/* Fix the section header and toggle styling */
+.section-header {
+    padding: 10px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.section-toggle {
+    font-size: 0.875rem;
+    color: #6c757d;
+    transition: transform 0.3s ease;
+}
+
+.section-content.collapsed {
+    max-height: 0;
+    padding: 0 15px;
+    overflow: hidden;
 }
 
 /* Section items in review results */
@@ -912,13 +906,7 @@ modal-body {
 }
 
 /* Review explanation styles */
-.review-explanation {
-    background-color: #f8f9fa;
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-    border-left: 4px solid #0056b3;
-}
+
 
     .review-explanation p {
         margin: 0 0 10px 0;
@@ -930,60 +918,7 @@ modal-body {
             margin-bottom: 0;
         }
 
-.status-info {
-    margin-bottom: 10px;
-    font-weight: 500;
-}
 
-.request-info {
-    color: #6c757d;
-    font-size: 0.9rem;
-}
-
-/* Feedback display */
-.feedback-container {
-    margin-top: 15px;
-    background-color: #f9f9f9;
-    border-radius: 5px;
-    padding: 10px;
-    border-left: 3px solid #3498db;
-}
-
-.feedback-step {
-    margin-bottom: 15px;
-}
-
-    .feedback-step h4 {
-        margin: 0 0 10px 0;
-        padding-bottom: 5px;
-        border-bottom: 1px solid #ddd;
-        color: #2c3e50;
-        font-weight: 600;
-    }
-
-.feedback-category {
-    margin: 0 0 12px 10px;
-    padding-left: 10px;
-    border-left: 2px solid #e0e0e0;
-}
-
-    .feedback-category h5 {
-        margin: 5px 0;
-        color: #34495e;
-        font-weight: 500;
-    }
-
-.feedback-result {
-    margin: 5px 0 5px 10px;
-    padding: 5px 8px;
-    border-radius: 4px;
-    display: inline-block;
-}
-
-.feedback-reasoning {
-    margin: 5px 0 5px 10px;
-    line-height: 1.4;
-}
 
 /* ==========================================================================
    Error and Confirmation Panels
@@ -1048,6 +983,8 @@ modal-body {
 .success {
     color: #28a745;
     font-weight: 600;
+    padding: 0 10px;
+    float: left;
 }
 
 /* Confirmation Panel */
@@ -1142,7 +1079,7 @@ modal-body {
 .formatted-json {
     padding: 15px;
     margin: 0;
-    font-family: 'Consolas', 'Monaco', 'Courier New', Courier, monospace;
+    /*font-family: 'Consolas', 'Monaco', 'Courier New', Courier, monospace;*/
     font-size: 13px;
     line-height: 1.5;
     white-space: pre-wrap;
@@ -1190,18 +1127,30 @@ modal-body {
     width: 100% !important;
     height: 100% !important;
     background-color: rgba(255, 255, 255, 0.8) !important;
-    z-index: 9999 !important; /* Ensure it's above everything else */
+    z-index: 9999 !important;
     margin: 0 !important;
     padding: 0 !important;
-    display: none !important; /* Start hidden by default */
-}
-.loading-indicator {
-    transition: opacity 0.3s ease-in-out !important;
-    opacity: 0 !important;
+    display: none; 
 }
 
+.loading-message {
+    text-align: center;
+    padding: 2rem;
+}
+
+.spinner {
+    margin: auto;
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
     .loading-indicator.active {
-        opacity: 1 !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
     }
 
     .loading-indicator .spinner {
@@ -1212,12 +1161,6 @@ modal-body {
         border-top: 4px solid #007bff !important;
         animation: spin 1s linear infinite !important;
         margin: 0 auto 20px auto !important;
-    }
-
-    .loading-indicator.active {
-        display: flex !important;
-        justify-content: center !important;
-        align-items: center !important;
     }
 
     .loading-indicator div:last-child {
@@ -1347,7 +1290,6 @@ modal-body {
     margin-bottom: 1rem;
 }
 
-/* Ensure no other elements can appear above the loading indicator */
 body.loading-active {
     overflow: hidden !important;
 }

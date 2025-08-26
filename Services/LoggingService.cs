@@ -98,7 +98,7 @@ namespace ClaimKitv1.Services
                     logEntry.AppendLine(responseData);
                 }
 
-                logEntry.AppendLine(new string('-', 80));
+                //logEntry.AppendLine(new string('-', 80));
 
                 // Write to the API log file
                 File.AppendAllText(_apiLogFile, logEntry.ToString());
@@ -154,7 +154,7 @@ namespace ClaimKitv1.Services
                     logEntry.AppendLine($"User Agent: {request.UserAgent}");
                 }
 
-                logEntry.AppendLine(new string('-', 80));
+                //logEntry.AppendLine(new string('-', 80));
 
                 // Write to the error log file
                 File.AppendAllText(_errorLogFile, logEntry.ToString());
@@ -194,7 +194,7 @@ namespace ClaimKitv1.Services
                     logEntry.AppendLine($"User IP: {HttpContext.Current.Request.UserHostAddress}");
                 }
 
-                logEntry.AppendLine(new string('-', 50));
+                //logEntry.AppendLine(new string('-', 50));
 
                 // Write to the user action log file
                 File.AppendAllText(_userActionLogFile, logEntry.ToString());
@@ -220,7 +220,7 @@ namespace ClaimKitv1.Services
                 var logEntry = new StringBuilder();
                 logEntry.AppendLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {eventType.ToUpper()}");
                 logEntry.AppendLine($"Details: {details}");
-                logEntry.AppendLine(new string('-', 50));
+                //logEntry.AppendLine(new string('-', 50));
 
                 // Write to the application events log file
                 File.AppendAllText(logFilePath, logEntry.ToString());
@@ -246,5 +246,7 @@ namespace ClaimKitv1.Services
 
             return _logDirectory;
         }
+
+        
     }
 }

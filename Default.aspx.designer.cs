@@ -33,13 +33,22 @@ namespace ClaimKitv1
         protected global::System.Web.UI.ScriptManager ScriptManager1;
 
         /// <summary>
-        /// pnlWorkflowProgress control.
+        /// btnLoadEmrData control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Panel pnlWorkflowProgress;
+        protected global::System.Web.UI.WebControls.Button btnLoadEmrData;
+
+        /// <summary>
+        /// btnClearEmrData control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnClearEmrData;
 
         /// <summary>
         /// txtPatientId control.
@@ -51,6 +60,33 @@ namespace ClaimKitv1
         protected global::System.Web.UI.WebControls.TextBox txtPatientId;
 
         /// <summary>
+        /// txtEncounterId control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.TextBox txtEncounterId;
+
+        /// <summary>
+        /// txtRegistrationId control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.TextBox txtRegistrationId;
+
+        /// <summary>
+        /// txtHospitalLocationId control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.TextBox txtHospitalLocationId;
+
+        /// <summary>
         /// txtInsuranceCompany control.
         /// </summary>
         /// <remarks>
@@ -58,6 +94,15 @@ namespace ClaimKitv1
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
         protected global::System.Web.UI.WebControls.TextBox txtInsuranceCompany;
+
+        /// <summary>
+        /// ddlPolicyBand control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.DropDownList ddlPolicyBand;
 
         /// <summary>
         /// txtPolicyBand control.
@@ -76,6 +121,15 @@ namespace ClaimKitv1
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
         protected global::System.Web.UI.WebControls.TextBox txtPolicyId;
+
+        /// <summary>
+        /// txtTemplateId control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.TextBox txtTemplateId;
 
         /// <summary>
         /// txtDoctorName control.
@@ -132,6 +186,15 @@ namespace ClaimKitv1
         protected global::System.Web.UI.WebControls.Button btnReviewNotes;
 
         /// <summary>
+        /// btnViewEnhanceNotes control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button btnViewEnhanceNotes;
+
+        /// <summary>
         /// UpdatePanel1 control.
         /// </summary>
         /// <remarks>
@@ -177,6 +240,15 @@ namespace ClaimKitv1
         protected global::System.Web.UI.WebControls.HiddenField hdnRequestId;
 
         /// <summary>
+        /// hdnSelectedDiagnoses control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.HiddenField hdnSelectedDiagnoses;
+
+        /// <summary>
         /// pnlActionButtons control.
         /// </summary>
         /// <remarks>
@@ -186,22 +258,13 @@ namespace ClaimKitv1
         protected global::System.Web.UI.WebControls.Panel pnlActionButtons;
 
         /// <summary>
-        /// btnViewResults control.
+        /// btnViewDetailedReview control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Button btnViewResults;
-
-        /// <summary>
-        /// btnGenerateClaim control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.Button btnGenerateClaim;
+        protected global::System.Web.UI.WebControls.Button btnViewDetailedReview;
 
         /// <summary>
         /// pnlReviewResults control.
@@ -265,51 +328,6 @@ namespace ClaimKitv1
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
         protected global::System.Web.UI.WebControls.Button btnServerApproveNotes;
-
-        /// <summary>
-        /// pnlGeneratedClaim control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.Panel pnlGeneratedClaim;
-
-        /// <summary>
-        /// litGeneratedClaim control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.Literal litGeneratedClaim;
-
-        /// <summary>
-        /// hdnSelectedDiagnoses control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.HiddenField hdnSelectedDiagnoses;
-
-        /// <summary>
-        /// btnServerApproveDiagnoses control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.Button btnServerApproveDiagnoses;
-
-        /// <summary>
-        /// btnGenerateClaimFromNotes control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.Button btnGenerateClaimFromNotes;
 
         /// <summary>
         /// pnlFinalNotes control.
