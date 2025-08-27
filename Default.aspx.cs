@@ -13,6 +13,7 @@ using ClaimKitv1.Models;
 using System.Web.Configuration;
 using System.IO;
 using Newtonsoft.Json.Linq;
+using System.Text;
 
 namespace ClaimKitv1
 {
@@ -326,6 +327,19 @@ namespace ClaimKitv1
                         {
                             _logger.LogError("EMR Integration Exception Details", integrationResult.Exception);
                         }
+
+                        // NEW: fall back to defaults so the form stays usable
+                        try
+                        {
+                            ClearEmrData(); // wipe any half-filled EMR fields first
+                            await InitializeFormDefaultsAsync(); // reload defaults from config
+                            _logger.LogUserAction("EMR Fallback Defaults Applied",
+                                "EMR failed; populated form with default configuration values.");
+                        }
+                        catch (Exception ex2)
+                        {
+                            _logger.LogError("Error applying EMR fallback defaults", ex2);
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -541,25 +555,211 @@ namespace ClaimKitv1
         #region Core Processing Methods
         private async Task PerformReviewAndEnhanceAsync(FormData formData)
         {
-            var currentTimestamp = GetCurrentUnixTimestamp();
-            var checkoutTime = currentTimestamp + (3600); // 1 hour offset
+            //var currentTimestamp = GetCurrentUnixTimestamp();
+            //var checkoutTime = currentTimestamp + (3600); // 1 hour offset
 
-            ViewState["CheckoutTime"] = checkoutTime;
+            //ViewState["CheckoutTime"] = checkoutTime;
 
+            //var patientHistory = await ParsePatientHistoryAsync();
+            //if (patientHistory == null) return;
+
+            //var reviewRequest = CreateReviewRequest(formData, currentTimestamp, patientHistory);
+            //var reviewResponse = await _apiService.ReviewNotesAsync(reviewRequest);
+
+            //ProcessReviewResponse(reviewResponse);
+
+            //if (reviewResponse.IsSuccess && !string.IsNullOrEmpty(reviewResponse.RequestId))
+            //{
+            //    await PerformAutoEnhanceAsync(reviewResponse.RequestId);
+            //}
+
+            var useNewApi = WebConfigurationManager.AppSettings["UseNewApi"] == "true";
+
+            if (useNewApi)
+            {
+                await PerformReviewWithNewApiAsync(formData);
+            }
+            else
+            {
+                var currentTimestamp = GetCurrentUnixTimestamp();
+                var checkoutTime = currentTimestamp + (3600);
+
+                ViewState["CheckoutTime"] = checkoutTime;
+
+                var patientHistory = await ParsePatientHistoryAsync();
+                if (patientHistory == null) return;
+
+                var reviewRequest = CreateReviewRequest(formData, currentTimestamp, patientHistory);
+                var reviewResponse = await _apiService.ReviewNotesAsync(reviewRequest);
+
+                ProcessReviewResponse(reviewResponse);
+
+                if (reviewResponse.IsSuccess && !string.IsNullOrEmpty(reviewResponse.RequestId))
+                {
+                    await PerformAutoEnhanceAsync(reviewResponse.RequestId);
+                }
+            }
+        }
+        private async Task PerformReviewWithNewApiAsync(FormData formData)
+        {
             var patientHistory = await ParsePatientHistoryAsync();
             if (patientHistory == null) return;
 
-            var reviewRequest = CreateReviewRequest(formData, currentTimestamp, patientHistory);
-            var reviewResponse = await _apiService.ReviewNotesAsync(reviewRequest);
+            var newReviewRequest = CreateNewApiReviewRequest(formData, patientHistory);
+            var newReviewResponse = await _apiService.ReviewNotesAsync(newReviewRequest);
 
-            ProcessReviewResponse(reviewResponse);
+            ProcessNewApiReviewResponse(newReviewResponse);
 
-            if (reviewResponse.IsSuccess && !string.IsNullOrEmpty(reviewResponse.RequestId))
+            if (newReviewResponse?.Status == "success" && !string.IsNullOrEmpty(newReviewResponse.ClaimReference))
             {
-                await PerformAutoEnhanceAsync(reviewResponse.RequestId);
+                await PerformEnhanceWithNewApiAsync(newReviewResponse.ClaimReference);
             }
         }
 
+        private DoctorNotesReviewRequest CreateNewApiReviewRequest(FormData formData, JArray patientHistory)
+        {
+            return new DoctorNotesReviewRequest
+            {
+                InsuranceCompanyName = formData.InsuranceCompany,
+                PatientIdentifier = formData.PatientIdentifier,
+                ClaimReference = GenerateClaimReference(),
+                Doctor = new DoctorInfo
+                {
+                    FullName = formData.DoctorName,
+                    Email = WebConfigurationManager.AppSettings["DefaultDoctorEmail"] ?? "doctor@hospital.com",
+                    Specialization = formData.DoctorSpecialization,
+                    LicenseNumber = txtDoctorId?.Text ?? "DOC001"
+                },
+                DoctorNotes = formData.ClinicalNotes,
+                History = patientHistory.ToString(Formatting.None),
+                ModelName = "gemini-2.0-flash",
+                Temperature = 0.3,
+                MaxTokens = 16000,
+                ClaimkitReviewRulesId = "doctornotes_review_criteria_expanded"
+            };
+        }
+
+        private async Task PerformEnhanceWithNewApiAsync(string claimReference)
+        {
+            _requestId = claimReference;
+            ViewState["RequestId"] = _requestId;
+
+            var enhanceRequest = CreateNewApiEnhanceRequest(claimReference);
+            var enhanceResponse = await _apiService.EnhanceNotesAsync(enhanceRequest);
+
+            ProcessNewApiEnhanceResponse(enhanceResponse);
+        }
+
+        private DoctorNotesEnhanceRequest CreateNewApiEnhanceRequest(string claimReference)
+        {
+            return new DoctorNotesEnhanceRequest
+            {
+                ClaimReference = claimReference,
+                ModelName = "gemini-2.0-flash",
+                Temperature = 0.3,
+                MaxTokens = 16000,
+                ClaimkitEnhanceRulesId = "doctornotes_enhance_criteria_expanded"
+            };
+        }
+
+        private string GenerateClaimReference()
+        {
+            var timestamp = DateTime.Now.ToString("yyyyMMddHHmmssff");
+            var encounter = txtEncounterId?.Text ?? "UNK";
+            var hospital = ConfigurationService.HospitalId.ToString();
+
+            return $"CR_{hospital}_{encounter}_{timestamp}";
+        }
+
+        private void ProcessNewApiReviewResponse(DoctorNotesReviewResponse response)
+        {
+            if (response?.Status != "success")
+            {
+                _uiManager.ShowError($"The clinical notes review could not be completed: {response?.Message?.En ?? "Unknown error"}");
+                return;
+            }
+
+            _requestId = response.ClaimReference;
+            if (string.IsNullOrEmpty(_requestId))
+            {
+                _uiManager.ShowError("Claim reference not returned from the medical records system.");
+                return;
+            }
+
+            UpdateRequestIdInClient(_requestId);
+            DisplayNewApiReviewResults(response);
+            ShowReviewPanels();
+
+            _logger.LogUserAction("New API Review Response Processed", $"Claim Reference: {_requestId}, Status: {response.Result?.Status}");
+        }
+
+        private void ProcessNewApiEnhanceResponse(DoctorNotesEnhanceResponse response)
+        {
+            if (response?.Status != "success")
+            {
+                _uiManager.ShowError($"The clinical notes enhancement could not be completed: {response?.Message?.En ?? "Unknown error"}");
+                return;
+            }
+
+            if (response.Result?.Output?.Data?.EnhancedNotes == null)
+            {
+                _uiManager.ShowError("No enhanced clinical notes were found in the response.");
+                return;
+            }
+
+            try
+            {
+                var enhancedNotesObj = ParseEnhancedNotesData(response.Result.Output.Data.EnhancedNotes);
+                StoreEnhancedNotesData(enhancedNotesObj);
+                DisplayEnhancedNotes(enhancedNotesObj);
+
+                _logger.LogUserAction("New API Enhanced Notes Displayed", $"Claim Reference: {_requestId}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error processing enhanced notes from new API", ex);
+                _uiManager.ShowError("Could not process enhanced notes. Please try again.");
+            }
+        }
+
+        private void DisplayNewApiReviewResults(DoctorNotesReviewResponse response)
+        {
+            if (lblStatus != null)
+                lblStatus.Text = $"<div class='success'>Status: {response.Result?.Status ?? "Review completed"}</div>";
+
+            if (lblRequestId != null)
+                lblRequestId.Text = $"<div>Claim Reference: {_requestId}</div>";
+
+            if (response.Result?.Output?.Data?.TotalReviewFeedbackJsonList?.Any() == true && rptReviewCategories != null)
+            {
+                var reviewCategories = ConvertNewApiToReviewCategories(response.Result.Output.Data.TotalReviewFeedbackJsonList);
+                rptReviewCategories.DataSource = reviewCategories;
+                rptReviewCategories.DataBind();
+            }
+        }
+
+        private List<ReviewCategory> ConvertNewApiToReviewCategories(List<ReviewFeedbackItem> feedbackList)
+        {
+            var categories = new List<ReviewCategory>();
+
+            foreach (var feedback in feedbackList)
+            {
+                foreach (var feedbackDetail in feedback.Feedback)
+                {
+                    foreach (var section in feedbackDetail.Value)
+                    {
+                        categories.Add(new ReviewCategory
+                        {
+                            Category = feedback.Category,
+                            Status = section.Value.Result,
+                            Reason = section.Value.Reasoning
+                        });
+                    }
+                }
+            }
+
+            return categories;
+        }
         private ReviewRequest CreateReviewRequest(FormData formData, long timestamp, JArray patientHistory)
         {
             return new ReviewRequest
@@ -846,7 +1046,7 @@ namespace ClaimKitv1
 
         private string BuildFinalNotesContent(JObject enhancedNotes, List<string> selectedSectionIds)
         {
-            var finalNotes = new System.Text.StringBuilder();
+            var finalNotes = new StringBuilder();
 
             // Add header
             finalNotes.AppendLine("# Patient Medical Record");
@@ -886,7 +1086,7 @@ namespace ClaimKitv1
             return finalNotes.ToString();
         }
 
-        private void AddInsuranceInfo(System.Text.StringBuilder finalNotes)
+        private void AddInsuranceInfo(StringBuilder finalNotes)
         {
             if (!string.IsNullOrEmpty(txtInsuranceCompany?.Text))
             {
@@ -899,7 +1099,7 @@ namespace ClaimKitv1
             }
         }
 
-        private void AddClinicianInfo(System.Text.StringBuilder finalNotes)
+        private void AddClinicianInfo(StringBuilder finalNotes)
         {
             finalNotes.AppendLine();
             finalNotes.AppendLine($"Clinician: {txtDoctorName?.Text}");
@@ -919,7 +1119,7 @@ namespace ClaimKitv1
 
         private string FormatSectionForFinalNotes(string sectionId, JToken sectionData)
         {
-            var result = new System.Text.StringBuilder();
+            var result = new StringBuilder();
 
             try
             {
@@ -969,7 +1169,7 @@ namespace ClaimKitv1
 
         private string FormatReviewCategory(ReviewCategory category)
         {
-            var content = new System.Text.StringBuilder();
+            var content = new StringBuilder();
             var displayName = FormatCategoryName(category.Category ?? "Unknown Category");
             var statusClass = GetStatusClass(category.Status);
 

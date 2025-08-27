@@ -110,6 +110,24 @@ namespace ClaimKitv1.Services
             }
         }
 
+        public void LogApiEndPointCall(string endpoint, string request, string response, bool isSuccess)
+        {
+            try
+            {
+                var logMessage = "[API " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "] " +
+                    "Endpoint: " + endpoint + " | " +
+                    "Success: " + isSuccess + " | " +
+                    "Request: " + (request?.Length > 1000 ? request.Substring(0, 1000) + "..." : request) + " | " +
+                    "Response: " + (response?.Length > 1000 ? response.Substring(0, 1000) + "..." : response);
+
+                System.Diagnostics.Debug.WriteLine(logMessage);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("API logging error: " + ex.Message);
+            }
+        }
+
         /// <summary>
         /// Logs an error that occurred in the application
         /// </summary>

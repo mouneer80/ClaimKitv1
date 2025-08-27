@@ -12,9 +12,9 @@ namespace ClaimKitv1.Services
     public class ClaimKitApiService : IClaimKitApiService
     {
         private readonly string _apiUrl;
-        private readonly string _newApiBaseUrl;           // ADD THIS
-        private readonly string _reviewEndpoint;          // ADD THIS  
-        private readonly string _enhanceEndpoint;         // ADD THIS
+        private readonly string _newApiBaseUrl;  
+        private readonly string _reviewEndpoint;   
+        private readonly string _enhanceEndpoint;
         private readonly string _apiKey;
         private readonly int _timeout;
         private readonly LoggingService _logger;
@@ -186,7 +186,7 @@ namespace ClaimKitv1.Services
             }
             finally
             {
-                _logger.LogApiCall(endpoint, jsonPayload, responseString, isSuccess);
+                _logger.LogApiEndPointCall(endpoint, jsonPayload, responseString, isSuccess);
             }
         }
 
